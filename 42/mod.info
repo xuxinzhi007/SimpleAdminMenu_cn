@@ -1,4 +1,7 @@
 name=简易管理员菜单
 id=SimpleAdminMenu
-description=版本 1.2 强制打开补丁。提供常驻“管理”按钮、F6 快捷键、右键菜单、物品生成、载具工具、快速击杀和地图物件编辑功能。
+description=版本 1.6.5（Build 42）。预设物品列表（轻量）；玩家状态读游戏 Stats；弹匣、车钥匙、快速阅读。
 poster=poster.png
+modversion=1.6.5
+versionMin=42.0
+author=SimpleAdminMenu

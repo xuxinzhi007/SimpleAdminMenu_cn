@@ -1,50 +1,87 @@
-# Simple Admin Menu v1.2 FORCE OPEN PATCH
+# Simple Admin Menu v1.6.5 (Build 42)
 
-This version fixes the issue where F6 and right-click do nothing even though the mod is enabled.
+Build 42 专用增强版。根目录仍保留旧版 v1.2（Build 41 兼容），`42/` 目录为新分页界面。
 
-## What changed
+## v1.6.5
 
-- Added a small always-visible ADMIN button near the lower-left of the screen.
-- Added multiple hotkey hooks for F6.
-- Kept right-click world menu support.
-- Added stronger console logging.
-- Added delayed fallback loading so the ADMIN button appears after you enter a save.
+- **物品列表**：取消全游戏 `ScriptManager` 扫描与「全部物品」分类，改回预设分类列表（更轻、不卡）
+- 仍可用**自定义 ID**生成任意物品；搜索只扫预设 + 收藏
 
-## How to open
+## v1.6.4
 
-After loading into a save, look for a small button that says:
+- **玩家状态**：饱食/饮水/精力/耐力直接从游戏 `getStats()`（及字段/角色 getter）读取，不再显示 `-`
 
-ADMIN
+## v1.6.3
 
-Click it to open or close the menu.
+- （已回退）曾用 `ScriptManager` 扫描全物品；因卡顿在 v1.6.5 改回预设列表
+- **弹匣**：弹药分类补充常见弹匣；「生成武器 + 弹匣」按武器脚本匹配弹匣
+- **车钥匙**：多路径生成并绑定当前载具 KeyId
 
-You can also try:
+## v1.6.2
 
-Right-click world > Admin Menu > Open Admin Menu
+- **快速阅读**：设置 / 更多页可切换 关 · 2x · 5x · 10x（效果接近 FastReading 10x，不覆盖原版文件）
+- 会调整 `SandboxVars.MinutesPerPage`，并在可用时挂钩 `ISReadABook`
+- 请勿与独立 FastReading 模组同时开，以免叠加速
 
-or press:
+## v1.6.1 修复
 
-F6
+- **物品图标预览**：列表行内图标 + 选中项大预览
+- **列表文字裁剪**：超长名称/ID 省略，不再冲出边框
+- **B42 物品 ID**：如香烟改为 `Base.CigarettePack`；水瓶、火柴、帐篷、睡袋等同理；生成时自动尝试别名
 
-## Install
+## v1.6 拓展（Build 42）
 
-Delete your old SimpleAdminMenu folder first.
+- **原版风格窗口**：`ISCollapsableWindow` 标题栏、关闭按钮、可拖动
+- **设置页**：热键（F6–F9）、悬浮管理按钮开关/位置、界面缩放；写入 ModData 并立即生效
+- **物品增强**：收藏分类、自定义物品 ID 输入并生成（走 `instanceItem`）
+- 标签选中高亮 + 底部金色指示线
 
-Then place the new SimpleAdminMenu folder into:
+## v1.5 拓展（Build 42）
 
-Windows:
-C:\Users\YOURNAME\Zomboid\mods\SimpleAdminMenu
+- **物品列表可视化**：滚动列表点击选择，显示名称与物品 ID
+- **玩家状态面板**：生命、感染、饱/水/精力/耐力、负重、坐标、当前载具（约每秒刷新）
+- **传送点**：命名保存当前位置，列表传送/删除；数据写入 ModData 持久化；右键可快速保存
 
-Linux / Steam Deck:
-~/Zomboid/mods/SimpleAdminMenu
+## v1.4 拓展（Build 42）
 
-Enable Simple Admin Menu from the Project Zomboid Mods menu.
+- 新增 **更多** 分页：技能满级、学习全部配方、建造/农业/机械/医疗/家具/瞬间动作作弊
+- **物品搜索**：按中文名或物品 ID 过滤，并新增杂项分类（发电机、油桶等）
+- **世界工具**：清理尸体、扑灭火焰、解锁光标门、显示坐标、`X,Y` 坐标传送
+- **载具**：生成匹配车钥匙、删除当前载具
+- 右键菜单补充解锁门、清理尸体快捷项
 
-## If it still does not show
+## v1.3 改动（Build 42）
 
-Open console.txt and search for:
+- 界面改为 **玩家 / 物品 / 载具 / 世界** 分页
+- 开关高亮 + 顶部状态条；自动维修全局保存
+- 右键快捷：治疗、击杀、传送、无敌
 
-[SimpleAdminMenu v1.2]
+## 如何打开
 
-If you do not see that line, the Lua file is not loading.
-If you do see it, send the nearby lines and the patch can be adjusted.
+进入存档后：
+
+1. 左下附近的 **管理 / ADMIN** 按钮（可在设置里关闭或改位置）  
+2. 右键地面 → 管理员菜单  
+3. 热键（默认 **F6**，可在设置里改为 F7/F8/F9）
+
+## 安装
+
+将整个 `SimpleAdminMenu` 文件夹放到：
+
+```
+C:\Users\你的用户名\Zomboid\mods\SimpleAdminMenu
+```
+
+在游戏 Mods 菜单中启用 **简易管理员菜单**。
+
+Build 42 会读取 `42/` 目录；Build 41 仍会读取根目录 `media/`。
+
+## 排查
+
+打开 `console.txt`，搜索：
+
+```
+[SimpleAdminMenu v1.6.5]
+```
+
+若完全没有这行日志，说明 Lua 未加载；若有报错，把附近几行发出来即可继续修。
