@@ -1,5 +1,4 @@
--- Simple Admin Menu v1.6.5 (Build 42)
--- Preset item lists, magazines, vehicle keys, favorites, custom ID spawn.
+-- Simple Admin Menu v1.7.2 (Build 42)
 
 if SimpleAdminMenuLoaded then return end
 
@@ -13,31 +12,41 @@ require "ISUI/ISTickBox"
 require "ISUI/ISImage"
 
 SimpleAdminMenu = ISCollapsableWindow:derive("SimpleAdminMenu")
-SimpleAdminMenu.version = "1.6.5"
+SimpleAdminMenu.version = "1.7.2"
 SimpleAdminMenu.keepVehicleRepaired = false
+SimpleAdminMenu.autoHeal = false
 SimpleAdminMenu.activeTab = 1
 SimpleAdminMenu.lastSquare = nil
 SimpleAdminMenu.modeState = SimpleAdminMenu.modeState or {}
 
 local DATA_KEY = "SimpleAdminMenuData"
 
+-- Charcoal + brass: readable in-game, not generic purple UI.
 local COLOR = {
-    panelBg = { r = 0.10, g = 0.10, b = 0.11, a = 0.96 },
-    panelBorder = { r = 0.55, g = 0.55, b = 0.52, a = 0.90 },
-    header = { r = 0.95, g = 0.82, b = 0.42, a = 1 },
-    muted = { r = 0.72, g = 0.72, b = 0.70, a = 1 },
-    white = { r = 1, g = 1, b = 1, a = 1 },
-    tabIdle = { r = 0.14, g = 0.15, b = 0.16, a = 1 },
-    tabActive = { r = 0.32, g = 0.27, b = 0.14, a = 1 },
-    tabHover = { r = 0.22, g = 0.20, b = 0.14, a = 1 },
-    btn = { r = 0.18, g = 0.19, b = 0.20, a = 1 },
-    btnBorder = { r = 0.50, g = 0.50, b = 0.48, a = 1 },
-    on = { r = 0.16, g = 0.34, b = 0.18, a = 1 },
-    onBorder = { r = 0.42, g = 0.78, b = 0.45, a = 1 },
-    danger = { r = 0.36, g = 0.14, b = 0.12, a = 1 },
-    dangerBorder = { r = 0.80, g = 0.38, b = 0.32, a = 1 },
-    accent = { r = 0.28, g = 0.24, b = 0.12, a = 1 },
-    accentBorder = { r = 0.78, g = 0.62, b = 0.28, a = 1 },
+    panelBg = { r = 0.09, g = 0.095, b = 0.10, a = 0.97 },
+    panelBorder = { r = 0.62, g = 0.52, b = 0.30, a = 0.92 },
+    header = { r = 0.93, g = 0.78, b = 0.38, a = 1 },
+    muted = { r = 0.68, g = 0.66, b = 0.60, a = 1 },
+    white = { r = 0.96, g = 0.95, b = 0.92, a = 1 },
+    tabBar = { r = 0.07, g = 0.075, b = 0.08, a = 0.95 },
+    tabIdle = { r = 0.15, g = 0.145, b = 0.13, a = 1 },
+    tabActive = { r = 0.30, g = 0.24, b = 0.12, a = 1 },
+    tabHover = { r = 0.24, g = 0.20, b = 0.12, a = 1 },
+    card = { r = 0.13, g = 0.125, b = 0.11, a = 0.88 },
+    cardBorder = { r = 0.42, g = 0.36, b = 0.22, a = 0.70 },
+    btn = { r = 0.17, g = 0.165, b = 0.15, a = 1 },
+    btnBorder = { r = 0.48, g = 0.42, b = 0.28, a = 1 },
+    btnHover = { r = 0.24, g = 0.22, b = 0.16, a = 1 },
+    on = { r = 0.14, g = 0.32, b = 0.18, a = 1 },
+    onBorder = { r = 0.45, g = 0.78, b = 0.48, a = 1 },
+    danger = { r = 0.34, g = 0.13, b = 0.12, a = 1 },
+    dangerBorder = { r = 0.82, g = 0.40, b = 0.32, a = 1 },
+    dangerHover = { r = 0.42, g = 0.18, b = 0.15, a = 1 },
+    accent = { r = 0.30, g = 0.24, b = 0.11, a = 1 },
+    accentBorder = { r = 0.86, g = 0.68, b = 0.30, a = 1 },
+    accentHover = { r = 0.38, g = 0.30, b = 0.14, a = 1 },
+    statusOk = { r = 0.45, g = 0.78, b = 0.48, a = 1 },
+    statusWarn = { r = 0.90, g = 0.55, b = 0.30, a = 1 },
 }
 
 local HOTKEY_NAMES = { "F6", "F7", "F8", "F9" }
@@ -80,8 +89,11 @@ local ITEM_ALIASES = {
     ["Base.Matches"] = { "Base.Matchbox", "Base.Matches" },
     ["Base.Sleepingbag"] = { "Base.SleepingBag_Green_Packed", "Base.SleepingBag_Green", "Base.SleepingBag_BluePlaid_Packed" },
     ["Base.CampingTentKit"] = { "Base.CampingTentKit2", "Base.CampingTentKit2_Packed", "Base.ImprovisedTentKit" },
-    ["Base.PetrolCan"] = { "Base.PetrolCan", "Base.Gasoline" },
-    ["Base.EmptyPetrolCan"] = { "Base.EmptyPetrolCan", "Base.EmptyGasoline" },
+    -- B42 often uses Gasoline / EmptyGasoline; prefer those first.
+    ["Base.PetrolCan"] = { "Base.Gasoline", "Base.PetrolCan" },
+    ["Base.EmptyPetrolCan"] = { "Base.EmptyGasoline", "Base.EmptyPetrolCan" },
+    ["Base.Gasoline"] = { "Base.Gasoline", "Base.PetrolCan" },
+    ["Base.EmptyGasoline"] = { "Base.EmptyGasoline", "Base.EmptyPetrolCan" },
     ["Base.Radio.WalkieTalkieMakeShift"] = { "Base.WalkieTalkieMakeShift", "Base.Radio.WalkieTalkieMakeShift", "Radio.WalkieTalkieMakeShift" },
 }
 
@@ -188,8 +200,8 @@ SimpleAdminMenu.items = {
         { "Item_Matches", "Base.Matchbox" },
         { "Item_Radio", "Base.WalkieTalkieMakeShift" },
         { "Item_Generator", "Base.Generator" },
-        { "Item_Petrol", "Base.PetrolCan" },
-        { "Item_EmptyPetrol", "Base.EmptyPetrolCan" },
+        { "Item_Petrol", "Base.Gasoline" },
+        { "Item_EmptyPetrol", "Base.EmptyGasoline" },
         { "Item_TentKit", "Base.CampingTentKit2" },
         { "Item_SleepingBag", "Base.SleepingBag_Green_Packed" },
     },
@@ -261,18 +273,28 @@ local function labelText(lbl, txt)
     if lbl then lbl.name = tostring(txt) end
 end
 
-local function styleButton(btn, bg, border)
+local function copyColor(c, a)
+    return { r = c.r, g = c.g, b = c.b, a = a or c.a or 1 }
+end
+
+local function styleButton(btn, bg, border, hover)
     if not btn then return end
-    btn.backgroundColor = { r = bg.r, g = bg.g, b = bg.b, a = bg.a }
-    btn.borderColor = { r = border.r, g = border.g, b = border.b, a = border.a }
-    if btn.backgroundColorMouseOver then
-        btn.backgroundColorMouseOver = {
-            r = math.min(1, bg.r + 0.10),
-            g = math.min(1, bg.g + 0.10),
-            b = math.min(1, bg.b + 0.10),
-            a = 1,
-        }
+    btn.backgroundColor = copyColor(bg)
+    btn.borderColor = copyColor(border)
+    btn.backgroundColorMouseOver = copyColor(hover or COLOR.btnHover)
+end
+
+local function styleByKind(btn, kind)
+    if kind == "danger" then
+        styleButton(btn, COLOR.danger, COLOR.dangerBorder, COLOR.dangerHover)
+    elseif kind == "accent" then
+        styleButton(btn, COLOR.accent, COLOR.accentBorder, COLOR.accentHover)
+    elseif kind == "tab" then
+        styleButton(btn, COLOR.tabIdle, COLOR.btnBorder, COLOR.tabHover)
+    else
+        styleButton(btn, COLOR.btn, COLOR.btnBorder, COLOR.btnHover)
     end
+    if btn then btn._samKind = kind or "normal" end
 end
 
 local function getModData()
@@ -286,6 +308,7 @@ local function getModData()
     if not data.waypoints then data.waypoints = {} end
     if not data.favorites then data.favorites = {} end
     if not data.settings then data.settings = {} end
+    -- carryBoost: nil = off; number = forced MaxWeightBase (B42 recalculates from base each tick)
     local s = data.settings
     if s.hotkey == nil then s.hotkey = "F6" end
     if s.showButton == nil then s.showButton = true end
@@ -328,15 +351,6 @@ local function favoriteEntries()
     return out
 end
 
-local function scriptManagerNow()
-    if getScriptManager then
-        local ok, sm = pcall(function() return getScriptManager() end)
-        if ok and sm then return sm end
-    end
-    if ScriptManager and ScriptManager.instance then return ScriptManager.instance end
-    return nil
-end
-
 --- Flat list of preset categories only (no full-game ScriptManager scan).
 local function buildFlatItems()
     local flat = {}
@@ -354,25 +368,6 @@ local function buildFlatItems()
         end
     end
     return flat
-end
-
-local function getMagazineTypeForItem(itemType)
-    local sm = scriptManagerNow()
-    if not sm or not itemType then return nil end
-    local script = nil
-    pcall(function()
-        if sm.getItem then script = sm:getItem(itemType) end
-    end)
-    if not script then return nil end
-    local mag = nil
-    if script.getMagazineType then
-        pcall(function() mag = script:getMagazineType() end)
-    end
-    if (not mag or mag == "") and script.getClipType then
-        pcall(function() mag = script:getClipType() end)
-    end
-    if mag == "" then mag = nil end
-    return mag
 end
 
 local function rememberSquare(sq)
@@ -551,12 +546,21 @@ local function spawnItemType(itemType, count)
     return added
 end
 
-local function killZombie(z, p)
+--- Prefer silent remove (no combat/noise). Kill() is fallback only.
+local function removeZombie(z, p)
     if not z then return false end
     local ok = false
-    if z.Kill then ok = pcall(function() z:Kill(p) end) end
-    if (not ok) and z.setHealth then ok = pcall(function() z:setHealth(0) end) end
-    if (not ok) and z.setDead then ok = pcall(function() z:setDead(true) end) end
+    pcall(function()
+        if z.removeFromWorld then z:removeFromWorld(); ok = true end
+    end)
+    if not ok then
+        pcall(function()
+            if z.removeFromSquare then z:removeFromSquare(); ok = true end
+        end)
+    end
+    if not ok and z.Kill then ok = pcall(function() z:Kill(p) end) end
+    if not ok and z.setHealth then ok = pcall(function() z:setHealth(0) end) end
+    if not ok and z.setDead then ok = pcall(function() z:setDead(true) end) end
     return ok
 end
 
@@ -576,7 +580,9 @@ local function toBool(v)
     return false
 end
 
-local function callPlayer(p, methodName, arg1)
+-- IMPORTANT: On this Kahlua build, wrong Java arity still prints ERROR even inside pcall.
+-- Only call cheat setters with a single boolean argument.
+local function callPlayer1(p, methodName, arg1)
     if not p or not methodName then return false, nil end
     local fn = p[methodName]
     if not fn then return false, nil end
@@ -590,22 +596,25 @@ local function getToggle(getter, stateKey)
     end
     local p = player()
     if not p or not getter then return false end
-    local ok, cur = callPlayer(p, getter)
+    local ok, cur = callPlayer1(p, getter)
     if not ok then return false end
     return toBool(cur)
 end
 
 local function setPlayerBool(p, setter, value)
-    local ok = callPlayer(p, setter, value)
-    if ok then return true end
+    value = value and true or false
+    if callPlayer1(p, setter, value) then return true end
     local alts = {
-        setGodMod = { "setGodMode" },
+        setGodMod = { "setGodMode", "setInvincible" },
+        setGodMode = { "setGodMod", "setInvincible" },
         setNoClip = { "setNoClip" },
-        setGhostMode = { "setGhostMode" },
+        setGhostMode = { "setGhostMode", "setZombiesDontAttack" },
         setInvisible = { "setInvisible" },
+        setZombiesDontAttack = { "setGhostMode" },
+        setInvincible = { "setGodMod", "setGodMode" },
     }
     for _, name in ipairs(alts[setter] or {}) do
-        if callPlayer(p, name, value) then return true end
+        if callPlayer1(p, name, value) then return true end
     end
     return false
 end
@@ -628,10 +637,22 @@ local function syncAutoRepairButton(btn)
     local on = SimpleAdminMenu.keepVehicleRepaired and true or false
     if on then
         btn:setTitle(text("Button_AutoRepairOn"))
-        styleButton(btn, COLOR.on, COLOR.onBorder)
+        styleButton(btn, COLOR.on, COLOR.onBorder, COLOR.on)
     else
         btn:setTitle(text("Button_AutoRepairOff"))
-        styleButton(btn, COLOR.btn, COLOR.btnBorder)
+        styleByKind(btn, "normal")
+    end
+end
+
+local function syncAutoHealButton(btn)
+    if not btn then return end
+    local on = SimpleAdminMenu.autoHeal and true or false
+    if on then
+        btn:setTitle(text("Button_AutoHealOn"))
+        styleButton(btn, COLOR.on, COLOR.onBorder, COLOR.on)
+    else
+        btn:setTitle(text("Button_AutoHealOff"))
+        styleByKind(btn, "accent")
     end
 end
 
@@ -658,9 +679,9 @@ local function repairVehicle(v)
     if v.updatePartStats then pcall(function() v:updatePartStats() end) end
 end
 
-local function healPlayer()
-    local p = player()
-    if not p then error(text("Error_NoPlayer")) end
+local function applyHeal(p)
+    p = p or player()
+    if not p then return false end
     local b = nil
     if p.getBodyDamage then b = p:getBodyDamage() end
     if b then
@@ -673,6 +694,11 @@ local function healPlayer()
         if b.setWetness then b:setWetness(0) end
         if b.setTemperature then b:setTemperature(37) end
     end
+    return true
+end
+
+local function healPlayer()
+    if not applyHeal(player()) then error(text("Error_NoPlayer")) end
     say(text("Status_Healed"))
 end
 
@@ -688,9 +714,9 @@ local function setGameStat(stats, setterName, fieldName, value)
     end
 end
 
-local function refillNeeds()
-    local p = player()
-    if not p then error(text("Error_NoPlayer")) end
+local function applyNeeds(p)
+    p = p or player()
+    if not p then return false end
     local s = nil
     pcall(function()
         if p.getStats then s = p:getStats() end
@@ -704,7 +730,21 @@ local function refillNeeds()
     setGameStat(s, "setBoredom", "boredom", 0)
     setGameStat(s, "setAnger", "anger", 0)
     setGameStat(s, "setPain", "pain", 0)
+    return true
+end
+
+local function refillNeeds()
+    if not applyNeeds(player()) then error(text("Error_NoPlayer")) end
     say(text("Status_NeedsFilled"))
+end
+
+local function toggleAutoHeal()
+    SimpleAdminMenu.autoHeal = not SimpleAdminMenu.autoHeal
+    if SimpleAdminMenu.autoHeal then
+        pcall(function() applyHeal(player()) end)
+        pcall(function() applyNeeds(player()) end)
+    end
+    say(text("Label_AutoHeal") .. text("Separator") .. enabledText(SimpleAdminMenu.autoHeal))
 end
 
 local function killNearby(radius)
@@ -713,10 +753,10 @@ local function killNearby(radius)
     local zeds = p:getCell():getZombieList()
     local killed = 0
     radius = radius or 6
-    for i = 0, zeds:size() - 1 do
+    for i = zeds:size() - 1, 0, -1 do
         local z = zeds:get(i)
-        if z and not z:isDead() and p:DistTo(z) <= radius then
-            if killZombie(z, p) then killed = killed + 1 end
+        if z and (not z.isDead or not z:isDead()) and p:DistTo(z) <= radius then
+            if removeZombie(z, p) then killed = killed + 1 end
         end
     end
     say(text("Status_KilledNearby") .. killed)
@@ -727,12 +767,12 @@ local function killCursor()
     local sq = mouseSquare()
     if not sq then error(text("Error_NoSquare")) end
     local m = sq:getMovingObjects()
-    for i = 0, m:size() - 1 do
+    for i = m:size() - 1, 0, -1 do
         local o = m:get(i)
         local iz = false
         if instanceof then pcall(function() iz = instanceof(o, "IsoZombie") end) end
         if not iz and o and o.getObjectName and o:getObjectName() == "Zombie" then iz = true end
-        if iz and killZombie(o, p) then
+        if iz and removeZombie(o, p) then
             say(text("Status_KilledCursor"))
             return
         end
@@ -742,12 +782,12 @@ local function killCursor()
         local best, bestDist = nil, 3
         for i = 0, zeds:size() - 1 do
             local z = zeds:get(i)
-            if z and not z:isDead() then
+            if z and (not z.isDead or not z:isDead()) then
                 local d = p:DistTo(z)
                 if d < bestDist then best, bestDist = z, d end
             end
         end
-        if best and killZombie(best, p) then
+        if best and removeZombie(best, p) then
             say(text("Status_KilledCursor"))
             return
         end
@@ -782,6 +822,76 @@ local function teleportToCursor()
     say(text("Status_Teleported"))
 end
 
+local function parseXY(raw)
+    if raw == nil then return nil end
+    local s = tostring(raw):gsub("%s+", "")
+    if s == "" then return nil end
+    local xs, ys = s:match("^(%-?%d+),(%-?%d+)$")
+    if not xs then xs, ys = s:match("^(%-?%d+);(%-?%d+)$") end
+    if not xs then return nil end
+    return tonumber(xs), tonumber(ys)
+end
+
+local function teleportToXY(raw)
+    local x, y = parseXY(raw)
+    if not x or not y then error(text("Error_BadCoords")) end
+    local p = player()
+    local z = 0
+    if p and p.getZ then z = math.floor(p:getZ()) end
+    local cell = getCell and getCell() or nil
+    if not cell then error(text("Error_NoPlayerSquare")) end
+    local sq = cell:getGridSquare(x, y, z)
+    if not sq and z ~= 0 then sq = cell:getGridSquare(x, y, 0) end
+    if not sq then error(text("Error_NoPlayerSquare")) end
+    teleportToSquare(sq)
+    say(text("Status_Teleported") .. string.format(" [%d,%d,%d]", x, y, math.floor(sq:getZ())))
+end
+
+local function squareFromObject(o)
+    if not o then return nil end
+    local sq = nil
+    pcall(function()
+        if o.getSquare then sq = o:getSquare() end
+    end)
+    return sq
+end
+
+local function squareFromWorldObjects(worldobjects)
+    if clickedSquare then
+        return rememberSquare(clickedSquare)
+    end
+    if worldobjects then
+        local o0 = worldobjects[0] or worldobjects[1]
+        local sq = squareFromObject(o0)
+        if sq then return rememberSquare(sq) end
+        if worldobjects.size then
+            local size = 0
+            pcall(function() size = worldobjects:size() end)
+            for i = 0, size - 1 do
+                local o = nil
+                pcall(function() o = worldobjects:get(i) end)
+                sq = squareFromObject(o)
+                if sq then return rememberSquare(sq) end
+            end
+        else
+            for i = 1, #worldobjects do
+                sq = squareFromObject(worldobjects[i])
+                if sq then return rememberSquare(sq) end
+            end
+        end
+    end
+    if SimpleAdminMenu.lastSquare then return SimpleAdminMenu.lastSquare end
+    return mouseSquare()
+end
+
+--- Teleport to the tile that was right-clicked (context menu), not current mouse pos.
+local function teleportToContext(worldobjects)
+    local sq = squareFromWorldObjects(worldobjects)
+    if not sq then error(text("Error_NoSquare")) end
+    teleportToSquare(sq)
+    say(text("Status_Teleported"))
+end
+
 local function setTimeHours(h)
     local gt = getGameTime and getGameTime() or nil
     if not gt then error(text("Error_NoGameTime")) end
@@ -794,18 +904,110 @@ end
 local function clearWeather()
     local cm = getClimateManager and getClimateManager() or nil
     if not cm then error(text("Error_WeatherUnavailable")) end
-    if cm.stopWeatherAndThunder then cm:stopWeatherAndThunder()
-    elseif cm.transmitStopWeather then cm:transmitStopWeather()
-    else error(text("Error_WeatherUnavailable")) end
+    local ok = false
+    if cm.stopWeatherAndThunder then
+        ok = pcall(function() cm:stopWeatherAndThunder() end) or ok
+    end
+    if cm.transmitStopWeather then
+        ok = pcall(function() cm:transmitStopWeather() end) or ok
+    end
+    if cm.transmitServerStopWeather then
+        ok = pcall(function() cm:transmitServerStopWeather() end) or ok
+    end
+    -- Best-effort fog wipe (B42 admin climate path varies by build).
+    pcall(function() cm.fogIntensity = 0 end)
+    pcall(function()
+        if ClimateManager and ClimateManager.FLOAT_FOG_INTENSITY and cm.getClimateFloat then
+            local fog = cm:getClimateFloat(ClimateManager.FLOAT_FOG_INTENSITY)
+            if fog then
+                if fog.setEnableAdmin then fog:setEnableAdmin(true) end
+                if fog.setAdminValue then fog:setAdminValue(0) end
+                if fog.setFinalValue then fog:setFinalValue(0) end
+            end
+        end
+    end)
+    if not ok then error(text("Error_WeatherUnavailable")) end
     say(text("Status_WeatherCleared"))
 end
 
-local function maxCarry()
+local function parseCarryInput(raw)
+    if raw == nil then return nil end
+    local s = tostring(raw):gsub("%s+", "")
+    if s == "" then return nil end
+    local n = tonumber(s)
+    if not n then
+        n = tonumber(s:match("(%d+)"))
+    end
+    if not n then return nil end
+    n = math.floor(n + 0.5)
+    if n < 1 then n = 1 end
+    if n > 99999 then n = 99999 end
+    return n
+end
+
+local function applyCarryBoost(p)
+    p = p or player()
+    if not p then return false end
+    local data = getModData()
+    local boost = tonumber(data.carryBoost)
+    if not boost or boost <= 0 then return false end
+    local ok = false
+    -- B42: capacity is derived from MaxWeightBase; setMaxWeight alone is overwritten.
+    pcall(function()
+        if p.setMaxWeightBase then p:setMaxWeightBase(boost); ok = true end
+    end)
+    pcall(function()
+        if p.setMaxWeightBackup then p:setMaxWeightBackup(boost) end
+    end)
+    pcall(function()
+        if p.setMaxWeight then p:setMaxWeight(boost) end
+    end)
+    return ok
+end
+
+local function applyCarryFromInput(raw)
     local p = player()
     if not p then error(text("Error_NoPlayer")) end
-    if p.setMaxWeightBackup then p:setMaxWeightBackup(1000) end
-    if p.setMaxWeight then p:setMaxWeight(1000) end
-    say(text("Status_MaxCarry"))
+    local value = parseCarryInput(raw)
+    if not value then error(text("Error_BadCarry")) end
+    local data = getModData()
+    if data.carryBoostPrev == nil then
+        local prev = 8
+        pcall(function()
+            if p.getMaxWeightBase then prev = p:getMaxWeightBase() or 8 end
+        end)
+        data.carryBoostPrev = prev
+    end
+    data.carryBoost = value
+    saveModData()
+    if not applyCarryBoost(p) then
+        error(text("Error_MissingMethod") .. "setMaxWeightBase")
+    end
+    say(text("Status_MaxCarry") .. tostring(value))
+end
+
+local function resetCarryBoost()
+    local p = player()
+    if not p then error(text("Error_NoPlayer")) end
+    local data = getModData()
+    local prev = tonumber(data.carryBoostPrev) or 8
+    data.carryBoost = nil
+    data.carryBoostPrev = nil
+    saveModData()
+    pcall(function()
+        if p.setMaxWeightBase then p:setMaxWeightBase(prev) end
+    end)
+    say(text("Status_MaxCarryOff") .. tostring(prev))
+end
+
+local function reapplyModeState(p)
+    p = p or player()
+    if not p or not SimpleAdminMenu.modeState then return end
+    for setter, val in pairs(SimpleAdminMenu.modeState) do
+        if val ~= nil and type(setter) == "string" and string.sub(setter, 1, 3) == "set" then
+            setPlayerBool(p, setter, val and true or false)
+        end
+    end
 end
 
 local function repairEquipped()
@@ -940,9 +1142,8 @@ local function extinguishFire(radius)
     say(text("Status_FireCleared") .. count)
 end
 
-local function unlockCursorDoor()
-    local sq = mouseSquare()
-    if not sq then error(text("Error_NoSquare")) end
+local function unlockDoorsOnSquare(sq)
+    if not sq or not sq.getObjects then return 0 end
     local objs = sq:getObjects()
     local unlocked = 0
     for i = 0, objs:size() - 1 do
@@ -961,6 +1162,37 @@ local function unlockCursorDoor()
             pcall(function() if o.setLockedByKey then o:setLockedByKey(false) end end)
             pcall(function() if o.setLockedByPadlock then o:setLockedByPadlock(false) end end)
             unlocked = unlocked + 1
+        end
+    end
+    return unlocked
+end
+
+local function unlockCursorDoor()
+    local sq = mouseSquare()
+    if not sq then error(text("Error_NoSquare")) end
+    local unlocked = unlockDoorsOnSquare(sq)
+    if unlocked <= 0 then error(text("Error_NoDoor")) end
+    say(text("Status_DoorUnlocked") .. unlocked)
+end
+
+local function unlockContextDoor(worldobjects)
+    local sq = squareFromWorldObjects(worldobjects)
+    if not sq then error(text("Error_NoSquare")) end
+    local unlocked = unlockDoorsOnSquare(sq)
+    if unlocked <= 0 then error(text("Error_NoDoor")) end
+    say(text("Status_DoorUnlocked") .. unlocked)
+end
+
+local function unlockNearbyDoors(radius)
+    local p = player()
+    if not p then error(text("Error_NoPlayer")) end
+    radius = radius or 8
+    local px, py, pz = math.floor(p:getX()), math.floor(p:getY()), math.floor(p:getZ())
+    local unlocked = 0
+    for x = px - radius, px + radius do
+        for y = py - radius, py + radius do
+            local sq = getCell():getGridSquare(x, y, pz)
+            if sq then unlocked = unlocked + unlockDoorsOnSquare(sq) end
         end
     end
     if unlocked <= 0 then error(text("Error_NoDoor")) end
@@ -1057,7 +1289,25 @@ local function deleteCurrentVehicle()
     say(text("Status_VehicleDeleted"))
 end
 
-local function giveVehicleKey()
+local function fuelVehicle(v)
+    v = v or resolveTargetVehicle(8)
+    if not v then return false end
+    local fueled = false
+    if v.setFuelAmount then
+        pcall(function() v:setFuelAmount(100) end)
+        fueled = true
+    end
+    if v.getPartById then
+        local gas = v:getPartById("GasTank")
+        if gas and gas.setContainerContentAmount and gas.getContainerCapacity then
+            pcall(function() gas:setContainerContentAmount(gas:getContainerCapacity()) end)
+            fueled = true
+        end
+    end
+    return fueled
+end
+
+local function giveVehicleKey(quiet)
     local p = player()
     local v = resolveTargetVehicle(8)
     if not p or not v then error(text("Error_EnterVehicle")) end
@@ -1070,7 +1320,9 @@ local function giveVehicleKey()
         if ok then
             local keyId = nil
             if v.getKeyId then pcall(function() keyId = v:getKeyId() end) end
-            say(text("Status_VehicleKey") .. (keyId ~= nil and (" #" .. tostring(keyId)) or ""))
+            if not quiet then
+                say(text("Status_VehicleKey") .. (keyId ~= nil and (" #" .. tostring(keyId)) or ""))
+            end
             return
         end
     end
@@ -1147,7 +1399,18 @@ local function giveVehicleKey()
             error(text("Error_VehicleKeyUnavailable") .. " (AddItem)")
         end
     end
-    say(text("Status_VehicleKey") .. (keyId ~= nil and (" #" .. tostring(keyId)) or ""))
+    if not quiet then
+        say(text("Status_VehicleKey") .. (keyId ~= nil and (" #" .. tostring(keyId)) or ""))
+    end
+end
+
+local function prepVehicle()
+    local v = resolveTargetVehicle(8)
+    if not v then error(text("Error_EnterVehicle")) end
+    repairVehicle(v)
+    if not fuelVehicle(v) then error(text("Error_FuelUnavailable")) end
+    giveVehicleKey(true)
+    say(text("Status_VehicleReady"))
 end
 
 local function hotkeyIndex(name)
@@ -1314,9 +1577,7 @@ function SimpleAdminMenu:addBtn(t, x, y, w, h, fn, kind)
     end)
     b:initialise()
     b:instantiate()
-    if kind == "danger" then styleButton(b, COLOR.danger, COLOR.dangerBorder)
-    elseif kind == "accent" then styleButton(b, COLOR.accent, COLOR.accentBorder)
-    else styleButton(b, COLOR.btn, COLOR.btnBorder) end
+    styleByKind(b, kind)
     self:addChild(b)
     return b
 end
@@ -1403,11 +1664,12 @@ function SimpleAdminMenu:drawItemListItem(y, item, alt)
     local selected = list.selected == item.index
 
     if selected then
-        list:drawRect(0, y, w, h - 1, 0.55, 0.32, 0.27, 0.14)
+        list:drawRect(0, y, w, h - 1, 0.62, COLOR.tabActive.r, COLOR.tabActive.g, COLOR.tabActive.b)
+        list:drawRect(0, y, 3, h - 1, 1, COLOR.accentBorder.r, COLOR.accentBorder.g, COLOR.accentBorder.b)
     elseif alt then
-        list:drawRect(0, y, w, h - 1, 0.18, 0.14, 0.14, 0.14)
+        list:drawRect(0, y, w, h - 1, 0.22, COLOR.card.r, COLOR.card.g, COLOR.card.b)
     end
-    list:drawRectBorder(0, y, w, h, 0.35, 0.35, 0.35, 0.32)
+    list:drawRectBorder(0, y, w, h, 0.40, COLOR.cardBorder.r, COLOR.cardBorder.g, COLOR.cardBorder.b)
 
     local tex = nil
     if entry and entry[2] then tex = getItemTexture(entry[2]) end
@@ -1494,9 +1756,9 @@ function SimpleAdminMenu:setTab(index)
     SimpleAdminMenu.activeTab = index
     for i, btn in ipairs(self.tabButtons) do
         if i == index then
-            styleButton(btn, COLOR.tabActive, COLOR.accentBorder)
+            styleButton(btn, COLOR.tabActive, COLOR.accentBorder, COLOR.tabHover)
         else
-            styleButton(btn, COLOR.tabIdle, COLOR.btnBorder)
+            styleButton(btn, COLOR.tabIdle, COLOR.btnBorder, COLOR.tabHover)
         end
     end
     for i, page in ipairs(self.tabPages) do
@@ -1519,24 +1781,27 @@ end
 
 function SimpleAdminMenu:refreshToggleStyles()
     for _, entry in ipairs(self.toggleButtons) do
-        local on = getToggle(entry.getter, entry.key or entry.setter)
+        local on = false
+        if entry.isOn then
+            on = entry.isOn() and true or false
+        else
+            on = getToggle(entry.getter, entry.key or entry.setter)
+        end
         if on then
-            styleButton(entry.btn, COLOR.on, COLOR.onBorder)
+            styleButton(entry.btn, COLOR.on, COLOR.onBorder, COLOR.on)
             if entry.btn and entry.btn.setTitle then entry.btn:setTitle(entry.label .. text("Suffix_On")) end
         else
-            styleButton(entry.btn, COLOR.btn, COLOR.btnBorder)
+            styleByKind(entry.btn, entry.btn._samKind or "normal")
             if entry.btn and entry.btn.setTitle then entry.btn:setTitle(entry.label .. text("Suffix_Off")) end
         end
     end
     syncAutoRepairButton(self.autoRepairBtn)
+    syncAutoHealButton(self.autoHealBtn)
 end
 
 function SimpleAdminMenu:buildStatusText()
     local parts = {}
-    if getToggle("isGodMod", "setGodMod") then table.insert(parts, text("Chip_God")) end
-    if getToggle("isInvisible", "setInvisible") then table.insert(parts, text("Chip_Invis")) end
-    if getToggle("isGhostMode", "setGhostMode") then table.insert(parts, text("Chip_Ghost")) end
-    if getToggle("isNoClip", "setNoClip") then table.insert(parts, text("Chip_NoClip")) end
+    if SimpleAdminMenu.autoHeal then table.insert(parts, text("Chip_AutoHeal")) end
     if getToggle("isBuildCheat", "setBuildCheat") then table.insert(parts, text("Chip_Build")) end
     if SimpleAdminMenu.keepVehicleRepaired then table.insert(parts, text("Chip_AutoRepair")) end
     if #parts == 0 then return text("Status_NoModes") end
@@ -1580,6 +1845,8 @@ function SimpleAdminMenu:refreshPlayerStats()
     pcall(function()
         if p.getInventoryWeight and p.getMaxWeight then
             weight = string.format("%.1f / %.1f", p:getInventoryWeight(), p:getMaxWeight())
+            local boost = getModData().carryBoost
+            if boost then weight = weight .. " [" .. text("Chip_CarryBoost") .. "]" end
         end
     end)
     local coords = string.format("%d, %d, %d", math.floor(p:getX()), math.floor(p:getY()), math.floor(p:getZ()))
@@ -1670,12 +1937,28 @@ function SimpleAdminMenu:prerender()
     ISCollapsableWindow.prerender(self)
     local th = 0
     if self.titleBarHeight then th = self:titleBarHeight() end
-    local tabBottom = th + 44
-    self:drawRect(0, th, self.width, 44, 0.45, 0.12, 0.11, 0.09)
-    self:drawRect(0, tabBottom, self.width, 2, 0.9, COLOR.accentBorder.r, COLOR.accentBorder.g, COLOR.accentBorder.b)
+    local tabH = 44
+    local tabBottom = th + tabH
+
+    -- Left brass edge + tab bar wash.
+    self:drawRect(0, 0, 3, self.height, 0.85, COLOR.accentBorder.r, COLOR.accentBorder.g, COLOR.accentBorder.b)
+    self:drawRect(0, th, self.width, tabH, COLOR.tabBar.a, COLOR.tabBar.r, COLOR.tabBar.g, COLOR.tabBar.b)
+    self:drawRect(0, tabBottom, self.width, 2, 0.95, COLOR.accentBorder.r, COLOR.accentBorder.g, COLOR.accentBorder.b)
+
     local active = self.tabButtons and self.tabButtons[self.tabIndex]
     if active then
-        self:drawRect(active:getX(), tabBottom - 2, active:getWidth(), 3, 1, COLOR.header.r, COLOR.header.g, COLOR.header.b)
+        self:drawRect(active:getX(), tabBottom - 3, active:getWidth(), 3, 1, COLOR.header.r, COLOR.header.g, COLOR.header.b)
+    end
+
+    -- Soft content cards (player tab status / tools).
+    if self.tabIndex == 1 then
+        local function drawCard(card)
+            if not card then return end
+            self:drawRect(card.x, card.y, card.w, card.h, COLOR.card.a, COLOR.card.r, COLOR.card.g, COLOR.card.b)
+            self:drawRectBorder(card.x, card.y, card.w, card.h, COLOR.cardBorder.a, COLOR.cardBorder.r, COLOR.cardBorder.g, COLOR.cardBorder.b)
+        end
+        drawCard(self.cardStatus)
+        drawCard(self.cardTools)
     end
 end
 
@@ -1685,8 +1968,9 @@ function SimpleAdminMenu:createChildren()
     local th = 16
     if self.titleBarHeight then th = self:titleBarHeight() end
     local pad = 18
-    local tabY, tabH, tabGap = th + 6, 32, 6
-    local tabW = math.floor((self.width - pad * 2 - tabGap * 5) / 6)
+    local tabY, tabH, tabGap = th + 6, 32, 4
+    local tabCount = #SimpleAdminMenu.tabs
+    local tabW = math.floor((self.width - pad * 2 - tabGap * (tabCount - 1)) / tabCount)
     local colGap = 12
     local bw = math.floor((self.width - pad * 2 - colGap) / 2)
     local x1, x2 = pad, pad + bw + colGap
@@ -1697,46 +1981,87 @@ function SimpleAdminMenu:createChildren()
         local bx = pad + (i - 1) * (tabW + tabGap)
         local btn = self:addBtn(text(key), bx, tabY, tabW, tabH, function()
             self:setTab(i)
-        end)
+        end, "tab")
         self.tabButtons[i] = btn
         self.tabPages[i] = {}
     end
 
     local contentY = th + 52
     self.statusLabel = self:addLabel("", pad, contentY, false, COLOR.header)
-    contentY = contentY + 22
+    contentY = contentY + 24
 
     -- Player
     page = 1
-    self:track(page, self:addLabel(text("Section_PlayerStatus"), pad, contentY, true, COLOR.header))
-    y = contentY + 26
-    self.statHealth = self:track(page, self:addLabel("", pad, y, false, COLOR.white))
+    local cardPad = 10
+    local statusTop = contentY
+    self:track(page, self:addLabel(text("Section_PlayerStatus"), pad + cardPad, contentY + 8, true, COLOR.header))
+    y = contentY + 34
+    self.statHealth = self:track(page, self:addLabel("", pad + cardPad, y, false, COLOR.white))
     self.statInfect = self:track(page, self:addLabel("", x2, y, false, COLOR.white))
     y = y + 20
-    self.statWeight = self:track(page, self:addLabel("", pad, y, false, COLOR.muted))
+    self.statWeight = self:track(page, self:addLabel("", pad + cardPad, y, false, COLOR.muted))
     self.statVehicle = self:track(page, self:addLabel("", x2, y, false, COLOR.muted))
     y = y + 20
-    self.statCoords = self:track(page, self:addLabel("", pad, y, false, COLOR.header))
-    y = y + 26
-    self:track(page, self:addLabel(text("Section_PlayerTools"), pad, y, true, COLOR.header))
-    y = y + 26
-    self:track(page, self:addToggleBtn(text("Button_GodMode"), x1, y, bw, bh, "isGodMod", "setGodMod"))
-    self:track(page, self:addToggleBtn(text("Button_Invisible"), x2, y, bw, bh, "isInvisible", "setInvisible"))
-    y = y + bh + gap
-    self:track(page, self:addToggleBtn(text("Button_GhostMode"), x1, y, bw, bh, "isGhostMode", "setGhostMode"))
-    self:track(page, self:addToggleBtn(text("Button_NoClip"), x2, y, bw, bh, "isNoClip", "setNoClip"))
-    y = y + bh + gap
+    self.statCoords = self:track(page, self:addLabel("", pad + cardPad, y, false, COLOR.header))
+    y = y + 28
+    self.cardStatus = {
+        x = pad - 2,
+        y = statusTop,
+        w = self.width - pad * 2 + 4,
+        h = y - statusTop + 4,
+    }
+
+    local toolsTop = y + 8
+    self:track(page, self:addLabel(text("Section_PlayerTools"), pad + cardPad, toolsTop + 8, true, COLOR.header))
+    y = toolsTop + 32
     self:track(page, self:addBtn(text("Button_HealPlayer"), x1, y, bw, bh, healPlayer, "accent"))
     self:track(page, self:addBtn(text("Button_RefillNeeds"), x2, y, bw, bh, refillNeeds, "accent"))
     y = y + bh + gap
-    self:track(page, self:addBtn(text("Button_MaxCarry"), x1, y, bw, bh, maxCarry))
-    self:track(page, self:addBtn(text("Button_RepairItems"), x2, y, bw, bh, repairEquipped))
+    self.autoHealBtn = self:track(page, self:addBtn(text("Button_AutoHealOff"), x1, y, bw * 2 + colGap, bh, function()
+        toggleAutoHeal()
+        syncAutoHealButton(self.autoHealBtn)
+        self:updateLabels()
+    end, "accent"))
+    syncAutoHealButton(self.autoHealBtn)
+    y = y + bh + gap
+    self:track(page, self:addLabel(text("Label_CarryHint"), pad + cardPad, y, false, COLOR.muted))
+    y = y + 18
+    local carryDefault = tostring(getModData().carryBoost or 50)
+    self.carryBox = ISTextEntryBox:new(carryDefault, x1, y, bw, bh)
+    self.carryBox:initialise()
+    self.carryBox:instantiate()
+    if self.carryBox.setOnlyNumbers then self.carryBox:setOnlyNumbers(true) end
+    self:addChild(self.carryBox)
+    self:track(page, self.carryBox)
+    local halfCarry = math.floor((bw - 8) / 2)
+    self:track(page, self:addBtn(text("Button_ApplyCarry"), x2, y, halfCarry, bh, function()
+        local raw = self.carryBox and self.carryBox:getText() or ""
+        applyCarryFromInput(raw)
+        if self.carryBox and getModData().carryBoost then
+            self.carryBox:setText(tostring(getModData().carryBoost))
+        end
+        self:refreshPlayerStats()
+    end, "accent"))
+    self:track(page, self:addBtn(text("Button_ResetCarry"), x2 + halfCarry + 8, y, halfCarry, bh, function()
+        resetCarryBoost()
+        if self.carryBox then self.carryBox:setText("50") end
+        self:refreshPlayerStats()
+    end))
+    y = y + bh + gap
+    self:track(page, self:addBtn(text("Button_RepairItems"), x1, y, bw * 2 + colGap, bh, repairEquipped))
     y = y + bh + gap
     self:track(page, self:addBtn(text("Button_KillNearby"), x1, y, bw, bh, function() killNearby(6) end, "danger"))
     self:track(page, self:addBtn(text("Button_KillWide"), x2, y, bw, bh, function() killNearby(20) end, "danger"))
     y = y + bh + gap
     self:track(page, self:addBtn(text("Button_KillCursor"), x1, y, bw, bh, killCursor, "danger"))
     self:track(page, self:addBtn(text("Button_Teleport"), x2, y, bw, bh, teleportToCursor, "accent"))
+    y = y + bh + 12
+    self.cardTools = {
+        x = pad - 2,
+        y = toolsTop,
+        w = self.width - pad * 2 + 4,
+        h = y - toolsTop,
+    }
 
     -- Items
     page = 2
@@ -1758,30 +2083,19 @@ function SimpleAdminMenu:createChildren()
     y = y + 34
     self:track(page, self:addLabel(text("Label_CustomId"), pad, y, false, COLOR.muted))
     y = y + 20
-    self.customIdBox = ISTextEntryBox:new("Base.", pad, y, searchW, 28)
+    -- Keep custom ID spawn (needed for mod items); drop "favorite this ID" (use list favorites).
+    local customBtnW = 208
+    local customBoxW = self.width - pad * 2 - customBtnW - 8
+    self.customIdBox = ISTextEntryBox:new("Base.", pad, y, customBoxW, 28)
     self.customIdBox:initialise(); self.customIdBox:instantiate()
     self:addChild(self.customIdBox); self:track(page, self.customIdBox)
-    self:track(page, self:addBtn(text("Button_SpawnCustom"), pad + searchW + 8, y, 100, 28, function()
+    self:track(page, self:addBtn(text("Button_SpawnCustom"), pad + customBoxW + 8, y, customBtnW, 28, function()
         local id = self.customIdBox and self.customIdBox:getText() or ""
         id = tostring(id):gsub("^%s+", ""):gsub("%s+$", "")
         if id == "" or id == "Base." then error(text("Error_BadItemId")) end
         local added = spawnItemType(id, 1)
         say(text("Status_SpawnedItem") .. id .. " x" .. tostring(added))
     end, "accent"))
-    self:track(page, self:addBtn(text("Button_FavCustom"), pad + searchW + 116, y, 100, 28, function()
-        local id = self.customIdBox and self.customIdBox:getText() or ""
-        id = tostring(id):gsub("^%s+", ""):gsub("%s+$", "")
-        if id == "" or id == "Base." then error(text("Error_BadItemId")) end
-        local favs = getFavorites()
-        for _, f in ipairs(favs) do
-            if (f.type or f[2]) == id then error(text("Error_FavoriteExists")) end
-        end
-        table.insert(favs, { label = id, type = id })
-        saveModData()
-        say(text("Status_FavoriteAdded") .. id)
-        self:populateItemList(true)
-        self:refreshSettingsLabels()
-    end))
     y = y + 36
     local previewSize = 52
     self.itemPreview = ISImage:new(pad, y, previewSize, previewSize, nil)
@@ -1836,7 +2150,7 @@ function SimpleAdminMenu:createChildren()
         self:refreshSettingsLabels()
     end, "danger"))
     y = y + bh + 8
-    local listH = math.max(160, self.height - y - 130)
+    local listH = math.max(180, self.height - y - 90)
     local listW = self.width - pad * 2
     self.itemList = ISScrollingListBox:new(pad, y, listW, listH)
     self.itemList:initialise(); self.itemList:instantiate()
@@ -1844,8 +2158,8 @@ function SimpleAdminMenu:createChildren()
     self.itemList.selected = 0
     self.itemList.font = UIFont.Medium
     self.itemList.drawBorder = true
-    self.itemList.backgroundColor = { r = 0.10, g = 0.11, b = 0.12, a = 0.95 }
-    self.itemList.borderColor = { r = COLOR.accentBorder.r, g = COLOR.accentBorder.g, b = COLOR.accentBorder.b, a = 0.85 }
+    self.itemList.backgroundColor = copyColor(COLOR.card, 0.96)
+    self.itemList.borderColor = copyColor(COLOR.accentBorder, 0.88)
     self.itemList.doDrawItem = SimpleAdminMenu.drawItemListItem
     self.itemList:setOnMouseDownFunction(self, self.onItemListClick)
     self:addChild(self.itemList); self:track(page, self.itemList)
@@ -1856,25 +2170,10 @@ function SimpleAdminMenu:createChildren()
         local added = spawnItemType(e[2], n)
         say(text("Status_SpawnedItem") .. self:itemDisplayName(e) .. " x" .. tostring(added))
     end
-    local function spawnWithMag()
-        local e = self:getSelectedItem()
-        if not e then error(text("Error_NoItem")) end
-        local added = spawnItemType(e[2], 1)
-        local mag = getMagazineTypeForItem(e[2])
-        local magAdded = 0
-        if mag then
-            magAdded = spawnItemType(mag, 1)
-            say(text("Status_SpawnedItem") .. self:itemDisplayName(e) .. " + " .. tostring(mag) .. " x" .. tostring(magAdded))
-        else
-            say(text("Status_SpawnedItem") .. self:itemDisplayName(e) .. " x" .. tostring(added) .. text("Status_NoMagazine"))
-        end
-    end
     local third = math.floor((listW - 16) / 3)
     self:track(page, self:addBtn(text("Button_SpawnSelected"), pad, y, third, bh, function() spawnCount(1) end, "accent"))
     self:track(page, self:addBtn(text("Button_SpawnFive"), pad + third + 8, y, third, bh, function() spawnCount(5) end))
     self:track(page, self:addBtn(text("Button_SpawnTen"), pad + (third + 8) * 2, y, third, bh, function() spawnCount(10) end))
-    y = y + bh + gap
-    self:track(page, self:addBtn(text("Button_SpawnWithMag"), pad, y, listW, bh, spawnWithMag, "accent"))
     self:populateItemList(false)
 
     -- Vehicles
@@ -1914,23 +2213,14 @@ function SimpleAdminMenu:createChildren()
     end))
     syncAutoRepairButton(self.autoRepairBtn)
     self:track(page, self:addBtn(text("Button_FuelVehicle"), x2, y, bw, bh, function()
-        local v = resolveTargetVehicle(8)
-        if not v then error(text("Error_EnterVehicle")) end
-        local fueled = false
-        if v.setFuelAmount then v:setFuelAmount(100); fueled = true end
-        if v.getPartById then
-            local gas = v:getPartById("GasTank")
-            if gas and gas.setContainerContentAmount and gas.getContainerCapacity then
-                pcall(function() gas:setContainerContentAmount(gas:getContainerCapacity()) end)
-                fueled = true
-            end
-        end
-        if not fueled then error(text("Error_FuelUnavailable")) end
+        if not fuelVehicle() then error(text("Error_FuelUnavailable")) end
         say(text("Status_Fueled"))
     end))
     y = y + bh + gap
-    self:track(page, self:addBtn(text("Button_VehicleKey"), x1, y, bw, bh, giveVehicleKey, "accent"))
+    self:track(page, self:addBtn(text("Button_VehicleKey"), x1, y, bw, bh, function() giveVehicleKey(false) end, "accent"))
     self:track(page, self:addBtn(text("Button_DeleteVehicle"), x2, y, bw, bh, deleteCurrentVehicle, "danger"))
+    y = y + bh + gap
+    self:track(page, self:addBtn(text("Button_PrepVehicle"), x1, y, bw * 2 + colGap, bh, prepVehicle, "accent"))
 
     -- World
     page = 4
@@ -1968,7 +2258,7 @@ function SimpleAdminMenu:createChildren()
     y = y + 38
     self.waypointLabel = self:track(page, self:addLabel("", pad, y, false, COLOR.white))
     y = y + 20
-    self.waypointList = ISScrollingListBox:new(pad, y, self.width - pad * 2, 120)
+    self.waypointList = ISScrollingListBox:new(pad, y, self.width - pad * 2, 88)
     self.waypointList:initialise(); self.waypointList:instantiate()
     self.waypointList.itemheight = 28
     self.waypointList.selected = 0
@@ -1978,7 +2268,7 @@ function SimpleAdminMenu:createChildren()
     self.waypointList.borderColor = { r = COLOR.accentBorder.r, g = COLOR.accentBorder.g, b = COLOR.accentBorder.b, a = 0.85 }
     self.waypointList:setOnMouseDownFunction(self, self.onWaypointListClick)
     self:addChild(self.waypointList); self:track(page, self.waypointList)
-    y = y + 130
+    y = y + 98
     self:track(page, self:addBtn(text("Button_TeleportWaypoint"), x1, y, bw, bh, function()
         local idx = self:getSelectedWaypointIndex()
         local list = getWaypoints()
@@ -1991,16 +2281,30 @@ function SimpleAdminMenu:createChildren()
     end, "accent"))
     self:track(page, self:addBtn(text("Button_Teleport"), x2, y, bw, bh, teleportToCursor))
     y = y + bh + gap
+    self:track(page, self:addLabel(text("Label_TeleportXY"), pad, y, false, COLOR.muted))
+    y = y + 18
+    self.xyBox = ISTextEntryBox:new("10000,10000", x1, y, bw, bh)
+    self.xyBox:initialise()
+    self.xyBox:instantiate()
+    self:addChild(self.xyBox)
+    self:track(page, self.xyBox)
+    self:track(page, self:addBtn(text("Button_TeleportXY"), x2, y, bw, bh, function()
+        teleportToXY(self.xyBox and self.xyBox:getText() or "")
+    end, "accent"))
+    y = y + bh + gap
     self:track(page, self:addLabel(text("Section_WorldTools"), pad, y, true, COLOR.header))
     y = y + 26
     self:track(page, self:addBtn(text("Button_TimeNoon"), x1, y, bw, bh, function() setTimeHours(12) end))
     self:track(page, self:addBtn(text("Button_TimeMidnight"), x2, y, bw, bh, function() setTimeHours(0) end))
     y = y + bh + gap
+    self:track(page, self:addBtn(text("Button_TimeDawn"), x1, y, bw, bh, function() setTimeHours(6) end))
+    self:track(page, self:addBtn(text("Button_TimeDusk"), x2, y, bw, bh, function() setTimeHours(18) end))
+    y = y + bh + gap
     self:track(page, self:addBtn(text("Button_ClearWeather"), x1, y, bw, bh, clearWeather, "accent"))
     self:track(page, self:addBtn(text("Button_ClearCorpses"), x2, y, bw, bh, function() clearCorpses(12) end, "danger"))
     y = y + bh + gap
     self:track(page, self:addBtn(text("Button_ExtinguishFire"), x1, y, bw, bh, function() extinguishFire(10) end, "accent"))
-    self:track(page, self:addBtn(text("Button_UnlockDoor"), x2, y, bw, bh, unlockCursorDoor))
+    self:track(page, self:addBtn(text("Button_UnlockNearbyDoors"), x2, y, bw, bh, function() unlockNearbyDoors(8) end))
     y = y + bh + gap
     self.objectLabel = self:track(page, self:addLabel("", pad, y, false, COLOR.muted))
     y = y + 20
@@ -2075,12 +2379,14 @@ function SimpleAdminMenu:createChildren()
     labelText(self.moreFastReadLabel, text("Settings_FastReading") .. fastReadLabel(getSettings().fastReadingMult))
     y = y + bh + gap + 4
     self:track(page, self:addLabel(text("Section_QuickCleanup"), pad, y, true, COLOR.header))
-    y = y + 28
-    self:track(page, self:addBtn(text("Button_ClearCorpses"), x1, y, bw, bh, function() clearCorpses(20) end, "danger"))
-    self:track(page, self:addBtn(text("Button_ExtinguishFire"), x2, y, bw, bh, function() extinguishFire(15) end, "accent"))
-    y = y + bh + gap
+    y = y + 22
+    self:track(page, self:addLabel(text("Label_MoreCleanupHint"), pad, y, false, COLOR.muted))
+    y = y + 24
+    -- Unique extras only; corpse/fire clear live on World tab to avoid duplicate buttons.
     self:track(page, self:addBtn(text("Button_KillWide"), x1, y, bw, bh, function() killNearby(40) end, "danger"))
-    self:track(page, self:addBtn(text("Button_ShowCoords"), x2, y, bw, bh, showCoords))
+    self:track(page, self:addBtn(text("Button_UnlockNearbyDoors"), x2, y, bw, bh, function() unlockNearbyDoors(12) end))
+    y = y + bh + gap
+    self:track(page, self:addBtn(text("Button_ShowCoords"), x1, y, bw, bh, showCoords))
 
     -- Settings
     page = 6
@@ -2242,9 +2548,9 @@ function SimpleAdminMenuButton:new(x, y, w, h)
     end)
     setmetatable(o, self)
     self.__index = self
-    o.backgroundColor = { r = COLOR.accent.r, g = COLOR.accent.g, b = COLOR.accent.b, a = 0.95 }
-    o.borderColor = { r = COLOR.accentBorder.r, g = COLOR.accentBorder.g, b = COLOR.accentBorder.b, a = 1 }
-    o.backgroundColorMouseOver = { r = 0.42, g = 0.34, b = 0.16, a = 1 }
+    o.backgroundColor = copyColor(COLOR.accent, 0.96)
+    o.borderColor = copyColor(COLOR.accentBorder)
+    o.backgroundColorMouseOver = copyColor(COLOR.accentHover)
     return o
 end
 
@@ -2269,17 +2575,29 @@ end
 
 local function context(playerNum, context, worldobjects, test)
     if test or not context then return end
-    if worldobjects and worldobjects[1] and worldobjects[1].getSquare then
-        pcall(function() rememberSquare(worldobjects[1]:getSquare()) end)
-    end
+    local clickSq = squareFromWorldObjects(worldobjects)
+    if clickSq then rememberSquare(clickSq) end
+
+    -- Top-level: teleport to the right-clicked tile (most used admin action).
+    context:addOption(text("Context_TeleportHere"), worldobjects, function()
+        safe(text("Context_TeleportHere"), function() teleportToContext(worldobjects) end)
+    end)
+
     local opt = context:addOption(text("Context_AdminMenu"), worldobjects, nil)
     local sub = ISContextMenu:getNew(context)
     context:addSubMenu(opt, sub)
     sub:addOption(text("Context_OpenMenu"), worldobjects, function() SimpleAdminMenu.open() end)
+    sub:addOption(text("Context_TeleportHere"), worldobjects, function()
+        safe(text("Context_TeleportHere"), function() teleportToContext(worldobjects) end)
+    end)
     sub:addOption(text("Button_HealPlayer"), worldobjects, function() safe(text("Button_HealPlayer"), healPlayer) end)
     sub:addOption(text("Button_KillNearby"), worldobjects, function() safe(text("Button_KillNearby"), function() killNearby(6) end) end)
-    sub:addOption(text("Button_Teleport"), worldobjects, function() safe(text("Button_Teleport"), teleportToCursor) end)
-    sub:addOption(text("Button_UnlockDoor"), worldobjects, function() safe(text("Button_UnlockDoor"), unlockCursorDoor) end)
+    sub:addOption(text("Button_UnlockDoor"), worldobjects, function()
+        safe(text("Button_UnlockDoor"), function() unlockContextDoor(worldobjects) end)
+    end)
+    sub:addOption(text("Button_UnlockNearbyDoors"), worldobjects, function()
+        safe(text("Button_UnlockNearbyDoors"), function() unlockNearbyDoors(8) end)
+    end)
     sub:addOption(text("Button_ClearCorpses"), worldobjects, function() safe(text("Button_ClearCorpses"), function() clearCorpses(12) end) end)
     sub:addOption(text("Button_SaveWaypointHere"), worldobjects, function()
         safe(text("Button_SaveWaypointHere"), function()
@@ -2299,9 +2617,6 @@ local function context(playerNum, context, worldobjects, test)
             end
             say(text("Status_WaypointSaved") .. name)
         end)
-    end)
-    sub:addOption(text("Button_GodMode"), worldobjects, function()
-        safe(text("Button_GodMode"), function() toggle(text("Button_GodMode"), "isGodMod", "setGodMod") end)
     end)
 end
 
@@ -2329,12 +2644,28 @@ local function autoRepair()
     end
 end
 
+local _boostTick = 0
+local function onPlayerUpdateBoosts()
+    autoRepair()
+    _boostTick = _boostTick + 1
+    if _boostTick < 30 then return end
+    _boostTick = 0
+    local p = player()
+    if not p then return end
+    applyCarryBoost(p)
+    reapplyModeState(p)
+    if SimpleAdminMenu.autoHeal then
+        pcall(function() applyHeal(p) end)
+        pcall(function() applyNeeds(p) end)
+    end
+end
+
 if Events.OnFillWorldObjectContextMenu then Events.OnFillWorldObjectContextMenu.Add(context) end
+-- Only OnKeyPressed: also hooking OnKeyStartPressed opens then immediately closes the menu.
 if Events.OnKeyPressed then Events.OnKeyPressed.Add(hotkey) end
-if Events.OnKeyStartPressed then Events.OnKeyStartPressed.Add(hotkey) end
 if Events.OnCreatePlayer then Events.OnCreatePlayer.Add(ready) end
 if Events.OnGameStart then Events.OnGameStart.Add(ready) end
-if Events.OnPlayerUpdate then Events.OnPlayerUpdate.Add(autoRepair) end
+if Events.OnPlayerUpdate then Events.OnPlayerUpdate.Add(onPlayerUpdateBoosts) end
 if Events.OnTick then
     local t = 0
     local function delayed()

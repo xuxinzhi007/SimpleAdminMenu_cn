@@ -1,7 +1,8 @@
 name=简易管理员菜单
 id=SimpleAdminMenu
-description=版本 1.6.5（Build 42）。预设物品列表（轻量）；玩家状态读游戏 Stats；弹匣、车钥匙、快速阅读。
+description=版本 1.7.2（Build 42）。已移除自动炮塔实验功能，回归管理工具本职。
 poster=poster.png
-modversion=1.6.5
+icon=postericon.png
+modversion=1.7.2
 versionMin=42.0
 author=SimpleAdminMenu

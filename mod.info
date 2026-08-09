@@ -2,3 +2,4 @@ name=简易管理员菜单
 id=SimpleAdminMenu
 description=版本 1.2（Build 41）。常驻管理按钮、F6、右键菜单。Build 42 请使用 42/ 目录中的 v1.3。
 poster=poster.png
+icon=postericon.png
