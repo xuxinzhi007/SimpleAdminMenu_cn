@@ -102,12 +102,11 @@ function SimpleAdminMenu.createButton()
     end)
 end
 local function context(playerNum, context, worldobjects, test) if test or not context then return end; log(text("Log_ContextHook")); local opt=context:addOption(text("Context_AdminMenu"),worldobjects,nil); local sub=ISContextMenu:getNew(context); context:addSubMenu(opt,sub); sub:addOption(text("Context_OpenMenu"),worldobjects,function() SimpleAdminMenu.open() end) end
-local function hotkey(key) if Keyboard and key==Keyboard.KEY_F6 then log(text("Log_Hotkey")); SimpleAdminMenu.open() end end
+local function hotkey(key) if Keyboard and key==Keyboard.KEY_F9 then log(text("Log_Hotkey")); SimpleAdminMenu.open() end end
 local function ready() log(text("Log_PlayerReady")); SimpleAdminMenu.createButton() end
 local function autoRepair() if SimpleAdminMenu.instance and SimpleAdminMenu.instance.keepVehicleRepaired then local p=player(); if p and p:getVehicle() then pcall(function() repairVehicle(p:getVehicle()) end) end end end
 if Events.OnFillWorldObjectContextMenu then Events.OnFillWorldObjectContextMenu.Add(context) end
 if Events.OnKeyPressed then Events.OnKeyPressed.Add(hotkey) end
-if Events.OnKeyStartPressed then Events.OnKeyStartPressed.Add(hotkey) end
 if Events.OnCreatePlayer then Events.OnCreatePlayer.Add(ready) end
 if Events.OnGameStart then Events.OnGameStart.Add(ready) end
 if Events.OnPlayerUpdate then Events.OnPlayerUpdate.Add(autoRepair) end

@@ -1,7 +1,7 @@
 {
   "IGUI_SimpleAdminMenu_None": "None",
   "IGUI_SimpleAdminMenu_Separator": ": ",
-  "IGUI_SimpleAdminMenu_Title": "Simple Admin Menu v1.7.2",
+  "IGUI_SimpleAdminMenu_Title": "Simple Admin Menu",
   "IGUI_SimpleAdminMenu_Hint": "ADMIN / right-click / hotkey · aim at ground before cursor actions",
   "IGUI_SimpleAdminMenu_Error_SpawnItemFailed": "Item spawn failed: ",
   "IGUI_SimpleAdminMenu_Section_PlayerStatus": "Player Status",
@@ -154,7 +154,8 @@
   "IGUI_SimpleAdminMenu_Label_Object": "Object: ",
   "IGUI_SimpleAdminMenu_Label_AutoRepair": "Auto-Repair: ",
   "IGUI_SimpleAdminMenu_Label_Search": "Search: ",
-  "IGUI_SimpleAdminMenu_Label_SearchHint": "Type name or item ID, then Search",
+  "IGUI_SimpleAdminMenu_Label_CatalogHint": "All items ",
+  "IGUI_SimpleAdminMenu_Label_SearchHint": "Type a name or item ID. Pick a category first to narrow the list.",
   "IGUI_SimpleAdminMenu_Label_CustomId": "Custom item ID (e.g. Base.Axe)",
   "IGUI_SimpleAdminMenu_Label_TeleportXY": "Teleport by coords (X,Y)",
   "IGUI_SimpleAdminMenu_Section_Settings": "Menu Settings",
@@ -185,6 +186,7 @@
   "IGUI_SimpleAdminMenu_Button_NextScale": "Scale >",
   "IGUI_SimpleAdminMenu_Button_ApplyShowButton": "Apply Button Visibility",
   "IGUI_SimpleAdminMenu_Button_ClearFavorites": "Clear Favorites",
+  "IGUI_SimpleAdminMenu_Button_SpawnCount": "Spawn",
   "IGUI_SimpleAdminMenu_Button_SpawnCustom": "Spawn Custom",
   "IGUI_SimpleAdminMenu_Button_FavCustom": "Favorite This ID",
   "IGUI_SimpleAdminMenu_Button_AddFavorite": "Add Favorite",
@@ -348,5 +350,5 @@
   "IGUI_SimpleAdminMenu_Log_ButtonCreated": "ADMIN button created",
   "IGUI_SimpleAdminMenu_Log_Hotkey": "Open hotkey fired",
   "IGUI_SimpleAdminMenu_Log_PlayerReady": "Player ready hook fired",
-  "IGUI_SimpleAdminMenu_Log_Loaded": "Build 42 mod v1.7.2 loaded."
+  "IGUI_SimpleAdminMenu_Log_Loaded": "Build 42 mod v1.7.6 loaded."
 }

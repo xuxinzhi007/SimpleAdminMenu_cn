@@ -1,4 +1,4 @@
--- Simple Admin Menu v1.7.2 (Build 42)
+-- Simple Admin Menu v1.7.6 (Build 42)
 
 if SimpleAdminMenuLoaded then return end
 
@@ -10,9 +10,10 @@ require "ISUI/ISTextEntryBox"
 require "ISUI/ISScrollingListBox"
 require "ISUI/ISTickBox"
 require "ISUI/ISImage"
+require "ISUI/ISComboBox"
 
 SimpleAdminMenu = ISCollapsableWindow:derive("SimpleAdminMenu")
-SimpleAdminMenu.version = "1.7.2"
+SimpleAdminMenu.version = "1.7.6"
 SimpleAdminMenu.keepVehicleRepaired = false
 SimpleAdminMenu.autoHeal = false
 SimpleAdminMenu.activeTab = 1
@@ -49,20 +50,29 @@ local COLOR = {
     statusWarn = { r = 0.90, g = 0.55, b = 0.30, a = 1 },
 }
 
-local HOTKEY_NAMES = { "F6", "F7", "F8", "F9" }
+-- F2–F6 are vanilla time controls. F6 is Fast Forward x3 (40x). Do not bind those.
+local HOTKEY_NAMES = { "F7", "F8", "F9" }
+local DEFAULT_HOTKEY = "F9"
 
 local function hotkeyCode(name)
     if not Keyboard then return nil end
-    if name == "F6" then return Keyboard.KEY_F6 end
     if name == "F7" then return Keyboard.KEY_F7 end
     if name == "F8" then return Keyboard.KEY_F8 end
     if name == "F9" then return Keyboard.KEY_F9 end
-    return Keyboard.KEY_F6
+    return Keyboard.KEY_F9
+end
+
+local function allowedHotkey(name)
+    for _, h in ipairs(HOTKEY_NAMES) do
+        if h == name then return true end
+    end
+    return false
 end
 
 local BUTTON_POS = { "bottomLeft", "midLeft", "bottomRight" }
 local UI_SCALES = { "standard", "large" }
-local FAST_READ_MULTS = { 1, 2, 5, 10 }
+local FAST_READ_MULTS = { 1, 2, 5, 10, 20, 50 }
+local ITEM_LIST_CAP = 250
 
 local function text(key)
     return getText("IGUI_SimpleAdminMenu_" .. key)
@@ -310,7 +320,8 @@ local function getModData()
     if not data.settings then data.settings = {} end
     -- carryBoost: nil = off; number = forced MaxWeightBase (B42 recalculates from base each tick)
     local s = data.settings
-    if s.hotkey == nil then s.hotkey = "F6" end
+    -- Saved F6 (and any other game time-control key) is migrated off the vanilla bind.
+    if not allowedHotkey(s.hotkey) then s.hotkey = DEFAULT_HOTKEY end
     if s.showButton == nil then s.showButton = true end
     if s.buttonPos == nil then s.buttonPos = "bottomLeft" end
     if s.uiScale == nil then s.uiScale = "large" end
@@ -349,6 +360,73 @@ local function favoriteEntries()
         end
     end
     return out
+end
+
+--- Full item scripts from the same source as the vanilla admin item list.
+local function ensureCatalog()
+    if SimpleAdminMenu._catalog then return SimpleAdminMenu._catalog end
+    local items = {}
+    local categories = {}
+    local seenCat = {}
+    local all = nil
+    if getAllItems then
+        local ok, result = pcall(getAllItems)
+        if ok then all = result end
+    end
+    if all and all.size and all.get then
+        for i = 0, all:size() - 1 do
+            local script = all:get(i)
+            if script then
+                local skip = false
+                pcall(function()
+                    if script.getObsolete and script:getObsolete() then skip = true end
+                    if script.isHidden and script:isHidden() then skip = true end
+                end)
+                if not skip then
+                    local full = nil
+                    pcall(function()
+                        if script.getFullName then full = script:getFullName() end
+                    end)
+                    if not full or full == "" then
+                        local modName, itemName = "", ""
+                        pcall(function()
+                            if script.getModuleName then modName = script:getModuleName() or "" end
+                            if script.getName then itemName = script:getName() or "" end
+                        end)
+                        if modName ~= "" and itemName ~= "" then full = modName .. "." .. itemName end
+                    end
+                    if full and full ~= "" then
+                        local display = full
+                        pcall(function()
+                            if script.getDisplayName then display = script:getDisplayName() or full end
+                        end)
+                        local cat = ""
+                        pcall(function()
+                            if script.getDisplayCategory then cat = script:getDisplayCategory() or "" end
+                        end)
+                        -- [3] = show the name as-is, [4] = display category for the filter.
+                        table.insert(items, { tostring(display), tostring(full), true, tostring(cat) })
+                        if cat ~= "" and not seenCat[cat] then
+                            seenCat[cat] = true
+                            table.insert(categories, cat)
+                        end
+                    end
+                end
+            end
+        end
+    end
+    table.sort(items, function(a, b) return tostring(a[1]) < tostring(b[1]) end)
+    table.sort(categories)
+    SimpleAdminMenu._catalog = { items = items, categories = categories }
+    return SimpleAdminMenu._catalog
+end
+
+local function categoryCaption(cat)
+    if cat == nil or cat == "" then return text("Category_Misc") end
+    local key = "IGUI_ItemCat_" .. tostring(cat)
+    local label = getText(key)
+    if not label or label == key then return tostring(cat) end
+    return label
 end
 
 --- Flat list of preset categories only (no full-game ScriptManager scan).
@@ -721,6 +799,26 @@ local function applyNeeds(p)
     pcall(function()
         if p.getStats then s = p:getStats() end
     end)
+    -- B42 replaced Stats:setHunger() with Stats:set(CharacterStat.*, value).
+    if s and s.set and CharacterStat then
+        local stats = {
+            { CharacterStat.HUNGER, 0 },
+            { CharacterStat.THIRST, 0 },
+            { CharacterStat.FATIGUE, 0 },
+            { CharacterStat.PANIC, 0 },
+            { CharacterStat.ENDURANCE, 1 },
+            { CharacterStat.STRESS, 0 },
+            { CharacterStat.BOREDOM, 0 },
+            { CharacterStat.ANGER, 0 },
+            { CharacterStat.PAIN, 0 },
+        }
+        for _, pair in ipairs(stats) do
+            if pair[1] ~= nil then
+                pcall(function() s:set(pair[1], pair[2]) end)
+            end
+        end
+        return true
+    end
     setGameStat(s, "setHunger", "hunger", 0)
     setGameStat(s, "setThirst", "thirst", 0)
     setGameStat(s, "setFatigue", "fatigue", 0)
@@ -1448,44 +1546,20 @@ local function fastReadLabel(mult)
     return tostring(mult) .. "x"
 end
 
---- Apply Fast Reading (like FastReading 10x mod), without replacing vanilla ISReadABook.
+--- B42 reads getSandboxOptions("MinutesPerPage") inside ISReadABook:getDuration().
+--- Dividing that result is what actually shortens the action, including fast-read items.
 local function applyFastReading()
-    local s = getSettings()
-    local mult = tonumber(s.fastReadingMult) or 1
-    if mult < 1 then mult = 1 end
-
-    if SandboxVars then
-        if SimpleAdminMenu._baseMinutesPerPage == nil then
-            local cur = SandboxVars.MinutesPerPage
-            if cur == nil then cur = 2.0 end
-            SimpleAdminMenu._baseMinutesPerPage = tonumber(cur) or 2.0
-        end
-        if mult <= 1 then
-            SandboxVars.MinutesPerPage = SimpleAdminMenu._baseMinutesPerPage
-        else
-            SandboxVars.MinutesPerPage = math.max(0.01, SimpleAdminMenu._baseMinutesPerPage / mult)
-        end
-    end
-
     if SimpleAdminMenu._fastReadHooked then return end
-    if type(ISReadABook) ~= "table" or not ISReadABook.new then return end
+    if type(ISReadABook) ~= "table" or not ISReadABook.getDuration then return end
 
-    local oldNew = ISReadABook.new
-    function ISReadABook:new(character, item, time)
-        local o = oldNew(self, character, item, time)
+    local oldDuration = ISReadABook.getDuration
+    function ISReadABook:getDuration()
+        local time = oldDuration(self)
         local m = tonumber(getSettings().fastReadingMult) or 1
-        if m > 1 and o and type(o.maxTime) == "number" and o.maxTime > 1 then
-            local usedSandbox = false
-            if SandboxVars and o.minutesPerPage ~= nil and SandboxVars.MinutesPerPage ~= nil then
-                if math.abs((tonumber(o.minutesPerPage) or 0) - (tonumber(SandboxVars.MinutesPerPage) or 0)) < 0.001 then
-                    usedSandbox = true
-                end
-            end
-            if not usedSandbox then
-                o.maxTime = math.max(1, o.maxTime / m)
-            end
+        if m > 1 and type(time) == "number" and time > 1 then
+            time = math.max(1, time / m)
         end
-        return o
+        return time
     end
     SimpleAdminMenu._fastReadHooked = true
     log(text("Log_FastReadHooked"))
@@ -1548,7 +1622,7 @@ end
 
 function SimpleAdminMenu:initialise()
     ISCollapsableWindow.initialise(self)
-    self:setTitle(text("Title"))
+    self:setTitle(text("Title") .. "  v" .. SimpleAdminMenu.version)
 end
 
 function SimpleAdminMenu:close()
@@ -1603,23 +1677,52 @@ end
 
 function SimpleAdminMenu:getVisibleItems()
     local q = self:getSearchText()
-    if q ~= "" then
-        local filtered = {}
-        for _, entry in ipairs(buildFlatItems()) do
-            local nameKey = entry[1]
-            local display = entry[3] and tostring(nameKey) or text(nameKey)
-            local name = string.lower(display)
-            local id = string.lower(entry[2] or "")
-            if string.find(name, q, 1, true) or string.find(id, q, 1, true) then
-                table.insert(filtered, entry)
+    local cat = self.itemCategory or "All"
+    local source
+    if cat == "Favorites" then
+        source = favoriteEntries()
+    else
+        local catalog = ensureCatalog()
+        source = catalog.items
+        if #source == 0 then
+            source = {}
+            for _, name in ipairs(SimpleAdminMenu.categoryNames) do
+                if name ~= "Favorites" then
+                    for _, entry in ipairs(SimpleAdminMenu.items[name] or {}) do
+                        table.insert(source, entry)
+                    end
+                end
             end
         end
-        self.filteredItems = filtered
-        return filtered
     end
-    local c = SimpleAdminMenu.categoryNames[self.categoryIndex] or "Food"
-    if c == "Favorites" then return favoriteEntries() end
-    return SimpleAdminMenu.items[c] or {}
+
+    if cat == "All" and q == "" then
+        self.itemMatchCount = #source
+        self.itemShownCount = 0
+        return {}
+    end
+
+    local filtered = {}
+    local total = 0
+    for _, entry in ipairs(source) do
+        if cat ~= "All" and cat ~= "Favorites" and tostring(entry[4] or "") ~= cat then
+            -- display category filter
+        else
+            local ok = true
+            if q ~= "" then
+                local name = string.lower(self:itemDisplayName(entry))
+                local id = string.lower(tostring(entry[2] or ""))
+                ok = string.find(name, q, 1, true) ~= nil or string.find(id, q, 1, true) ~= nil
+            end
+            if ok then
+                total = total + 1
+                if #filtered < ITEM_LIST_CAP then table.insert(filtered, entry) end
+            end
+        end
+    end
+    self.itemMatchCount = total
+    self.itemShownCount = #filtered
+    return filtered
 end
 
 function SimpleAdminMenu:itemDisplayName(entry)
@@ -1652,6 +1755,20 @@ function SimpleAdminMenu:populateItemList(keepSelection)
         self.selectedItemEntry = nil
     end
     self:refreshItemPreview()
+    if self.categoryLabel then
+        local q = self:getSearchText()
+        local shown = self.itemShownCount or 0
+        local matched = self.itemMatchCount or shown
+        local cat = self.itemCategory or "All"
+        if cat == "All" and q == "" then
+            labelText(self.categoryLabel, text("Label_CatalogHint") .. tostring(matched))
+        elseif shown < matched then
+            labelText(self.categoryLabel, text("Label_Search") .. tostring(shown) .. "/" .. tostring(matched))
+        else
+            local catName = cat == "Favorites" and text("Category_Favorites") or (cat == "All" and text("Category_All") or categoryCaption(cat))
+            labelText(self.categoryLabel, catName .. "  (" .. tostring(matched) .. ")")
+        end
+    end
 end
 
 function SimpleAdminMenu:drawItemListItem(y, item, alt)
@@ -1767,7 +1884,10 @@ function SimpleAdminMenu:setTab(index)
             if child and child.setVisible then child:setVisible(visible) end
         end
     end
-    if index == 2 then self:populateItemList(true) end
+    if index == 2 then
+        self:fillItemCategoryCombo()
+        self:populateItemList(true)
+    end
     if index == 4 then self:populateWaypointList() end
     if index == 6 then self:refreshSettingsLabels() end
     self:updateLabels()
@@ -1883,13 +2003,17 @@ end
 
 function SimpleAdminMenu:updateLabels()
     local item = self:getSelectedItem()
-    local list = self:getVisibleItems()
     local q = self:getSearchText()
-    if q ~= "" then
-        labelText(self.categoryLabel, text("Label_Search") .. q .. "  (" .. tostring(#list) .. ")")
+    local shown = self.itemShownCount or 0
+    local matched = self.itemMatchCount or shown
+    local cat = self.itemCategory or "All"
+    if cat == "All" and q == "" then
+        labelText(self.categoryLabel, text("Label_CatalogHint") .. tostring(matched))
+    elseif shown < matched then
+        labelText(self.categoryLabel, text("Label_Search") .. tostring(shown) .. "/" .. tostring(matched))
     else
-        local c = SimpleAdminMenu.categoryNames[self.categoryIndex] or "Food"
-        labelText(self.categoryLabel, text("Label_Category") .. text(SimpleAdminMenu.categoryLabels[c] or "None") .. "  (" .. tostring(#list) .. ")")
+        local catName = cat == "Favorites" and text("Category_Favorites") or (cat == "All" and text("Category_All") or categoryCaption(cat))
+        labelText(self.categoryLabel, catName .. "  (" .. tostring(matched) .. ")")
     end
     if item then
         local resolved = resolveItemType(item[2])
@@ -1962,6 +2086,21 @@ function SimpleAdminMenu:prerender()
     end
 end
 
+function SimpleAdminMenu:fillItemCategoryCombo()
+    if not self.catCombo or self.catComboFilled then return end
+    local catalog = ensureCatalog()
+    if #catalog.items == 0 then return end
+    self.catCombo:clear()
+    self.catCombo:addOptionWithData(text("Category_All"), "All")
+    self.catCombo:addOptionWithData(text("Category_Favorites"), "Favorites")
+    for _, cat in ipairs(catalog.categories) do
+        self.catCombo:addOptionWithData(categoryCaption(cat), cat)
+    end
+    self.catCombo.selected = 1
+    self.itemCategory = "All"
+    self.catComboFilled = true
+end
+
 function SimpleAdminMenu:createChildren()
     ISCollapsableWindow.createChildren(self)
 
@@ -1986,16 +2125,16 @@ function SimpleAdminMenu:createChildren()
         self.tabPages[i] = {}
     end
 
-    local contentY = th + 52
-    self.statusLabel = self:addLabel("", pad, contentY, false, COLOR.header)
-    contentY = contentY + 24
+    local contentY = th + 48
 
     -- Player
     page = 1
     local cardPad = 10
     local statusTop = contentY
     self:track(page, self:addLabel(text("Section_PlayerStatus"), pad + cardPad, contentY + 8, true, COLOR.header))
-    y = contentY + 34
+    y = contentY + 32
+    self.statusLabel = self:track(page, self:addLabel("", pad + cardPad, y, false, COLOR.header))
+    y = y + 20
     self.statHealth = self:track(page, self:addLabel("", pad + cardPad, y, false, COLOR.white))
     self.statInfect = self:track(page, self:addLabel("", x2, y, false, COLOR.white))
     y = y + 20
@@ -2055,6 +2194,12 @@ function SimpleAdminMenu:createChildren()
     y = y + bh + gap
     self:track(page, self:addBtn(text("Button_KillCursor"), x1, y, bw, bh, killCursor, "danger"))
     self:track(page, self:addBtn(text("Button_Teleport"), x2, y, bw, bh, teleportToCursor, "accent"))
+    y = y + bh + gap
+    self:track(page, self:addToggleBtn(text("Button_GodMode"), x1, y, bw, bh, "isGodMod", "setGodMod"))
+    self:track(page, self:addToggleBtn(text("Button_Invisible"), x2, y, bw, bh, "isInvisible", "setInvisible"))
+    y = y + bh + gap
+    self:track(page, self:addToggleBtn(text("Button_GhostMode"), x1, y, bw, bh, "isGhostMode", "setGhostMode"))
+    self:track(page, self:addToggleBtn(text("Button_NoClip"), x2, y, bw, bh, "isNoClip", "setNoClip"))
     y = y + bh + 12
     self.cardTools = {
         x = pad - 2,
@@ -2063,41 +2208,56 @@ function SimpleAdminMenu:createChildren()
         h = y - toolsTop,
     }
 
-    -- Items
+    -- Items: full script catalog, same source as the vanilla admin item list.
     page = 2
+    self.itemCategory = self.itemCategory or "All"
     self:track(page, self:addLabel(text("Section_ItemSpawner"), pad, contentY, true, COLOR.header))
-    y = contentY + 24
+    y = contentY + 26
     self:track(page, self:addLabel(text("Label_SearchHint"), pad, y, false, COLOR.muted))
     y = y + 20
-    local searchW = self.width - pad * 2 - 220
-    self.searchBox = ISTextEntryBox:new("", pad, y, searchW, 28)
-    self.searchBox:initialise(); self.searchBox:instantiate()
-    self:addChild(self.searchBox); self:track(page, self.searchBox)
-    self:track(page, self:addBtn(text("Button_Search"), pad + searchW + 8, y, 100, 28, function()
-        self:populateItemList(false)
-    end, "accent"))
-    self:track(page, self:addBtn(text("Button_ClearSearch"), pad + searchW + 116, y, 100, 28, function()
-        if self.searchBox then self.searchBox:setText("") end
-        self:populateItemList(false)
-    end))
-    y = y + 34
-    self:track(page, self:addLabel(text("Label_CustomId"), pad, y, false, COLOR.muted))
-    y = y + 20
-    -- Keep custom ID spawn (needed for mod items); drop "favorite this ID" (use list favorites).
-    local customBtnW = 208
-    local customBoxW = self.width - pad * 2 - customBtnW - 8
-    self.customIdBox = ISTextEntryBox:new("Base.", pad, y, customBoxW, 28)
-    self.customIdBox:initialise(); self.customIdBox:instantiate()
-    self:addChild(self.customIdBox); self:track(page, self.customIdBox)
-    self:track(page, self:addBtn(text("Button_SpawnCustom"), pad + customBoxW + 8, y, customBtnW, 28, function()
-        local id = self.customIdBox and self.customIdBox:getText() or ""
-        id = tostring(id):gsub("^%s+", ""):gsub("%s+$", "")
-        if id == "" or id == "Base." then error(text("Error_BadItemId")) end
-        local added = spawnItemType(id, 1)
-        say(text("Status_SpawnedItem") .. id .. " x" .. tostring(added))
-    end, "accent"))
+    self.searchBox = ISTextEntryBox:new("", pad, y, self.width - pad * 2, 28)
+    self.searchBox:initialise()
+    self.searchBox:instantiate()
+    self.searchBox.target = self
+    self.searchBox.onTextChangeFunction = function(target)
+        target:populateItemList(false)
+    end
+    self:addChild(self.searchBox)
+    self:track(page, self.searchBox)
     y = y + 36
-    local previewSize = 52
+    local comboW = math.floor((self.width - pad * 2) * 0.46)
+    self.catCombo = ISComboBox:new(pad, y, comboW, 28, self, function(target, combo)
+        target.itemCategory = combo:getOptionData(combo.selected) or "All"
+        target:populateItemList(false)
+    end)
+    self.catCombo:initialise()
+    self.catCombo:instantiate()
+    self.catCombo:addOptionWithData(text("Category_All"), "All")
+    self.catCombo:addOptionWithData(text("Category_Favorites"), "Favorites")
+    self:addChild(self.catCombo)
+    self:track(page, self.catCombo)
+    local countW = 72
+    self.countBox = ISTextEntryBox:new("1", pad + comboW + 8, y, countW, 28)
+    self.countBox:initialise()
+    self.countBox:instantiate()
+    if self.countBox.setOnlyNumbers then self.countBox:setOnlyNumbers(true) end
+    self:addChild(self.countBox)
+    self:track(page, self.countBox)
+    local spawnX = pad + comboW + 8 + countW + 8
+    local spawnW = self.width - pad - spawnX
+    local function spawnSelected()
+        local e = self:getSelectedItem()
+        if not e then error(text("Error_NoItem")) end
+        local n = tonumber(self.countBox and self.countBox:getText() or "1") or 1
+        if n < 1 then n = 1 end
+        if n > 100 then n = 100 end
+        n = math.floor(n)
+        local added = spawnItemType(e[2], n)
+        say(text("Status_SpawnedItem") .. self:itemDisplayName(e) .. " x" .. tostring(added))
+    end
+    self:track(page, self:addBtn(text("Button_SpawnCount"), spawnX, y, spawnW, 28, spawnSelected, "accent"))
+    y = y + 36
+    local previewSize = 44
     self.itemPreview = ISImage:new(pad, y, previewSize, previewSize, nil)
     self.itemPreview:initialise()
     self.itemPreview:instantiate()
@@ -2105,21 +2265,10 @@ function SimpleAdminMenu:createChildren()
     self.itemPreview.scaledHeight = previewSize
     self:addChild(self.itemPreview)
     self:track(page, self.itemPreview)
-    self.categoryLabel = self:track(page, self:addLabel("", pad + previewSize + 10, y + 4, false, COLOR.muted))
-    self.itemLabel = self:track(page, self:addLabel("", pad + previewSize + 10, y + 24, false, COLOR.white))
-    y = y + previewSize + 10
-    local half = math.floor((bw - 8) / 2)
-    self:track(page, self:addBtn(text("Button_PrevCategory"), x1, y, half, bh, function()
-        self.categoryIndex = cycle(self.categoryIndex, #SimpleAdminMenu.categoryNames, -1)
-        if self.searchBox then self.searchBox:setText("") end
-        self:populateItemList(false)
-    end))
-    self:track(page, self:addBtn(text("Button_NextCategory"), x1 + half + 8, y, half, bh, function()
-        self.categoryIndex = cycle(self.categoryIndex, #SimpleAdminMenu.categoryNames, 1)
-        if self.searchBox then self.searchBox:setText("") end
-        self:populateItemList(false)
-    end))
-    self:track(page, self:addBtn(text("Button_AddFavorite"), x2, y, half, bh, function()
+    self.categoryLabel = self:track(page, self:addLabel("", pad + previewSize + 10, y + 2, false, COLOR.muted))
+    self.itemLabel = self:track(page, self:addLabel("", pad + previewSize + 10, y + 22, false, COLOR.white))
+    y = y + previewSize + 8
+    self:track(page, self:addBtn(text("Button_AddFavorite"), x1, y, bw, bh, function()
         local e = self:getSelectedItem()
         if not e then error(text("Error_NoItem")) end
         local favs = getFavorites()
@@ -2132,7 +2281,7 @@ function SimpleAdminMenu:createChildren()
         self:populateItemList(true)
         self:refreshSettingsLabels()
     end, "accent"))
-    self:track(page, self:addBtn(text("Button_RemoveFavorite"), x2 + half + 8, y, half, bh, function()
+    self:track(page, self:addBtn(text("Button_RemoveFavorite"), x2, y, bw, bh, function()
         local e = self:getSelectedItem()
         if not e then error(text("Error_NoItem")) end
         local favs = getFavorites()
@@ -2150,10 +2299,11 @@ function SimpleAdminMenu:createChildren()
         self:refreshSettingsLabels()
     end, "danger"))
     y = y + bh + 8
-    local listH = math.max(180, self.height - y - 90)
+    local listH = math.max(160, self.height - y - 16)
     local listW = self.width - pad * 2
     self.itemList = ISScrollingListBox:new(pad, y, listW, listH)
-    self.itemList:initialise(); self.itemList:instantiate()
+    self.itemList:initialise()
+    self.itemList:instantiate()
     self.itemList.itemheight = 40
     self.itemList.selected = 0
     self.itemList.font = UIFont.Medium
@@ -2162,18 +2312,9 @@ function SimpleAdminMenu:createChildren()
     self.itemList.borderColor = copyColor(COLOR.accentBorder, 0.88)
     self.itemList.doDrawItem = SimpleAdminMenu.drawItemListItem
     self.itemList:setOnMouseDownFunction(self, self.onItemListClick)
-    self:addChild(self.itemList); self:track(page, self.itemList)
-    y = y + listH + 10
-    local function spawnCount(n)
-        local e = self:getSelectedItem()
-        if not e then error(text("Error_NoItem")) end
-        local added = spawnItemType(e[2], n)
-        say(text("Status_SpawnedItem") .. self:itemDisplayName(e) .. " x" .. tostring(added))
-    end
-    local third = math.floor((listW - 16) / 3)
-    self:track(page, self:addBtn(text("Button_SpawnSelected"), pad, y, third, bh, function() spawnCount(1) end, "accent"))
-    self:track(page, self:addBtn(text("Button_SpawnFive"), pad + third + 8, y, third, bh, function() spawnCount(5) end))
-    self:track(page, self:addBtn(text("Button_SpawnTen"), pad + (third + 8) * 2, y, third, bh, function() spawnCount(10) end))
+    self:addChild(self.itemList)
+    self:track(page, self.itemList)
+    self:fillItemCategoryCombo()
     self:populateItemList(false)
 
     -- Vehicles
@@ -2258,7 +2399,7 @@ function SimpleAdminMenu:createChildren()
     y = y + 38
     self.waypointLabel = self:track(page, self:addLabel("", pad, y, false, COLOR.white))
     y = y + 20
-    self.waypointList = ISScrollingListBox:new(pad, y, self.width - pad * 2, 88)
+    self.waypointList = ISScrollingListBox:new(pad, y, self.width - pad * 2, 64)
     self.waypointList:initialise(); self.waypointList:instantiate()
     self.waypointList.itemheight = 28
     self.waypointList.selected = 0
@@ -2268,7 +2409,7 @@ function SimpleAdminMenu:createChildren()
     self.waypointList.borderColor = { r = COLOR.accentBorder.r, g = COLOR.accentBorder.g, b = COLOR.accentBorder.b, a = 0.85 }
     self.waypointList:setOnMouseDownFunction(self, self.onWaypointListClick)
     self:addChild(self.waypointList); self:track(page, self.waypointList)
-    y = y + 98
+    y = y + 72
     self:track(page, self:addBtn(text("Button_TeleportWaypoint"), x1, y, bw, bh, function()
         local idx = self:getSelectedWaypointIndex()
         local list = getWaypoints()
@@ -2620,13 +2761,18 @@ local function context(playerNum, context, worldobjects, test)
     end)
 end
 
+local _hotkeyAt = 0
 local function hotkey(key)
     local s = getSettings()
-    local want = hotkeyCode(s.hotkey or "F6")
-    if want and key == want then
-        log(text("Log_Hotkey"))
-        SimpleAdminMenu.open()
-    end
+    local want = hotkeyCode(s.hotkey or DEFAULT_HOTKEY)
+    if not want or key ~= want then return end
+    -- OnKeyPressed repeats while the key is held, which toggled the window shut immediately.
+    local now = 0
+    if getTimestampMs then now = getTimestampMs() else now = os.time() * 1000 end
+    if now - _hotkeyAt < 400 then return end
+    _hotkeyAt = now
+    log(text("Log_Hotkey"))
+    SimpleAdminMenu.open()
 end
 
 local function ready()

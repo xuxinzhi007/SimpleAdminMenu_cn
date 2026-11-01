@@ -1,7 +1,7 @@
 {
   "IGUI_SimpleAdminMenu_None": "无",
   "IGUI_SimpleAdminMenu_Separator": "：",
-  "IGUI_SimpleAdminMenu_Title": "简易管理员菜单 v1.7.2",
+  "IGUI_SimpleAdminMenu_Title": "简易管理员菜单",
   "IGUI_SimpleAdminMenu_Hint": "管理按钮 / 右键地面 / 热键 · 光标功能请先对着地面再点按钮",
   "IGUI_SimpleAdminMenu_Error_SpawnItemFailed": "物品生成失败：",
   "IGUI_SimpleAdminMenu_Section_PlayerStatus": "玩家状态",
@@ -153,8 +153,9 @@
   "IGUI_SimpleAdminMenu_Label_Vehicle": "载具：",
   "IGUI_SimpleAdminMenu_Label_Object": "物件：",
   "IGUI_SimpleAdminMenu_Label_AutoRepair": "自动维修：",
+  "IGUI_SimpleAdminMenu_Label_CatalogHint": "全部物品 ",
   "IGUI_SimpleAdminMenu_Label_Search": "搜索：",
-  "IGUI_SimpleAdminMenu_Label_SearchHint": "输入中文名或物品 ID 后点搜索",
+  "IGUI_SimpleAdminMenu_Label_SearchHint": "输入中文名或物品 ID，边打边筛。先选分类再搜更快。",
   "IGUI_SimpleAdminMenu_Label_CustomId": "自定义物品 ID（如 Base.Axe）",
   "IGUI_SimpleAdminMenu_Label_TeleportXY": "坐标传送（格式：X,Y）",
   "IGUI_SimpleAdminMenu_Section_Settings": "菜单设置",
@@ -185,7 +186,7 @@
   "IGUI_SimpleAdminMenu_Button_NextScale": "缩放 >",
   "IGUI_SimpleAdminMenu_Button_ApplyShowButton": "应用按钮显示",
   "IGUI_SimpleAdminMenu_Button_ClearFavorites": "清空收藏",
-  "IGUI_SimpleAdminMenu_Button_SpawnCustom": "生成自定义",
+  "IGUI_SimpleAdminMenu_Button_SpawnCount": "生成",
   "IGUI_SimpleAdminMenu_Button_FavCustom": "收藏此 ID",
   "IGUI_SimpleAdminMenu_Button_AddFavorite": "加入收藏",
   "IGUI_SimpleAdminMenu_Button_RemoveFavorite": "移出收藏",
@@ -348,5 +349,5 @@
   "IGUI_SimpleAdminMenu_Log_ButtonCreated": "管理按钮已创建",
   "IGUI_SimpleAdminMenu_Log_Hotkey": "打开热键已触发",
   "IGUI_SimpleAdminMenu_Log_PlayerReady": "玩家加载事件已触发",
-  "IGUI_SimpleAdminMenu_Log_Loaded": "Build 42 模组 v1.7.2 已加载。"
+  "IGUI_SimpleAdminMenu_Log_Loaded": "Build 42 模组 v1.7.6 已加载。"
 }

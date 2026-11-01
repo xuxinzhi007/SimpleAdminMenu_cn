@@ -2,7 +2,7 @@
   "IGUI_SimpleAdminMenu_None": "无",
   "IGUI_SimpleAdminMenu_Separator": "：",
   "IGUI_SimpleAdminMenu_Title": "简易管理员菜单 v1.2",
-  "IGUI_SimpleAdminMenu_Hint": "点击管理按钮、右键点击地面或按 F6",
+  "IGUI_SimpleAdminMenu_Hint": "点击管理按钮、右键点击地面或按 F9",
   "IGUI_SimpleAdminMenu_Category_Food": "食物",
   "IGUI_SimpleAdminMenu_Category_Medical": "医疗",
   "IGUI_SimpleAdminMenu_Category_Tools": "工具",
@@ -135,7 +135,7 @@
   "IGUI_SimpleAdminMenu_Log_MenuOpened": "菜单已打开",
   "IGUI_SimpleAdminMenu_Log_ButtonCreated": "管理按钮已创建",
   "IGUI_SimpleAdminMenu_Log_ContextHook": "右键菜单事件已触发",
-  "IGUI_SimpleAdminMenu_Log_Hotkey": "F6 快捷键已触发",
+  "IGUI_SimpleAdminMenu_Log_Hotkey": "F9 快捷键已触发",
   "IGUI_SimpleAdminMenu_Log_PlayerReady": "玩家加载事件已触发",
   "IGUI_SimpleAdminMenu_Log_Loaded": "模组已加载，进入存档后应显示管理按钮。"
 }

@@ -2,7 +2,7 @@
   "IGUI_SimpleAdminMenu_None": "None",
   "IGUI_SimpleAdminMenu_Separator": ": ",
   "IGUI_SimpleAdminMenu_Title": "Simple Admin Menu v1.2",
-  "IGUI_SimpleAdminMenu_Hint": "Click ADMIN button, right-click world, or press F6",
+  "IGUI_SimpleAdminMenu_Hint": "Click ADMIN button, right-click world, or press F9",
   "IGUI_SimpleAdminMenu_Category_Food": "Food",
   "IGUI_SimpleAdminMenu_Category_Medical": "Medical",
   "IGUI_SimpleAdminMenu_Category_Tools": "Tools",
@@ -135,7 +135,7 @@
   "IGUI_SimpleAdminMenu_Log_MenuOpened": "Menu opened",
   "IGUI_SimpleAdminMenu_Log_ButtonCreated": "ADMIN button created",
   "IGUI_SimpleAdminMenu_Log_ContextHook": "Context hook fired",
-  "IGUI_SimpleAdminMenu_Log_Hotkey": "F6 fired",
+  "IGUI_SimpleAdminMenu_Log_Hotkey": "F9 fired",
   "IGUI_SimpleAdminMenu_Log_PlayerReady": "Player ready hook fired",
   "IGUI_SimpleAdminMenu_Log_Loaded": "Loaded. ADMIN button should appear after loading into a save."
 }

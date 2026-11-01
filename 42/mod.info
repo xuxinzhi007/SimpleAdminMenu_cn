@@ -1,8 +1,8 @@
 name=简易管理员菜单
 id=SimpleAdminMenu
-description=版本 1.7.2（Build 42）。已移除自动炮塔实验功能，回归管理工具本职。
+description=版本 1.7.6（Build 42）。物品页只从游戏物品表生成，不再手填 ID。
 poster=poster.png
 icon=postericon.png
-modversion=1.7.2
+modversion=1.7.6
 versionMin=42.0
 author=SimpleAdminMenu
